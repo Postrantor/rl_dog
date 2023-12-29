@@ -70,7 +70,7 @@ class mdoger7BulletEnv(gym.Env):
       on_rack=False,
       render=True,
       kd_for_pd_controllers=0.3,
-      env_randomizer=mdoger7_env_randomizer.mdoger7EnvRandomizer()):
+      env_randomizer=mdoger7_env_randomizer.EnvRandomizer()):
     """Initialize the mdoger7 gym environment.
 
     Args:
