@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 """
 @file main.py
 @brief 使用强化学习算法训练智能体在mdoger7BulletEnv环境中执行任务的示例代码
@@ -26,5 +28,5 @@ agent = SAC2Agent(env)
 # @param verbose: 是否打印训练过程中的详细信息
 train_loop(env, agent, max_total_steps=500000, max_steps=1000, batch_size=256, intermediate_policies=True, verbose=True)
 
-# 保存最终训练得到的策略
+# 4. 保存最终训练得到的策略
 agent.save_policy("finalPolicy.pth")

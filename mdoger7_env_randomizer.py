@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import random
 import numpy as np
 from pybullet_envs.bullet import env_randomizer_base

@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 """This file implements the functionalities of a minitaur using pybullet.
 """
 

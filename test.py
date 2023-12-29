@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from sac import PolicyNetwork
 import mdoger7_gym_env as e
 import pybullet as p

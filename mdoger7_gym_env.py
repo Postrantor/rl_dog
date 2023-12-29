@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 """This file implements the gym environment of mdoger7.
 """
 

@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 """This file implements an accurate motor model."""
 import numpy as np
 
