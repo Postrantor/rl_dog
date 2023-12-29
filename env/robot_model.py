@@ -44,9 +44,11 @@ FOOT_LINK_ID = [3, 7, 11, 115]
 BASE_LINK_ID = -1
 
 
-class mdoger7(object):
-  """The mdoger7 class that simulates a quadruped robot from Ghost Robotics.
+class mdoger7():
   """
+  The mdoger7 class that simulates a quadruped robot from Ghost Robotics.
+  """
+
   def __init__(self,
                pybullet_client,
                urdf_root=os.path.join(os.path.dirname(__file__)),
@@ -143,12 +145,31 @@ class mdoger7(object):
         self._joint_name_to_id[motor_name] for motor_name in MOTOR_NAMES
     ]
 
-  def Reset(self, reload_urdf=True):
-    """Reset the mdoger7 to its initial states.
+  def _SetMotorTorqueById(self, motor_id, torque):
+    self._pybullet_client.setJointMotorControl2(
+        bodyIndex=self.quadruped,
+        jointIndex=motor_id,
+        controlMode=self._pybullet_client.TORQUE_CONTROL,
+        force=torque)
 
-    Args:
-      reload_urdf: Whether to reload the urdf file. If not, Reset() just place
-        the mdoger7 back to its starting position.
+  def _SetDesiredMotorAngleById(self, motor_id, desired_angle):
+    self._pybullet_client.setJointMotorControl2(
+        bodyIndex=self.quadruped,
+        jointIndex=motor_id,
+        controlMode=self._pybullet_client.POSITION_CONTROL,
+        targetPosition=desired_angle,
+        positionGain=self._kp,
+        velocityGain=self._kd,
+        force=self._max_force)
+
+  def _SetDesiredMotorAngleByName(self, motor_name, desired_angle):
+    self._SetDesiredMotorAngleById(self._joint_name_to_id[motor_name],
+                                   desired_angle)
+
+  def Reset(self, reload_urdf=True):
+    """
+    @brief: reset the mdoger7 to its initial states.
+    @param: reload_urdf: whether to reload the urdf file.
     """
 
     if reload_urdf:
@@ -186,27 +207,6 @@ class mdoger7(object):
       self.ResetPose()
     self._overheat_counter = np.zeros(self.num_motors)
     self._motor_enabled_list = [True] * self.num_motors
-
-  def _SetMotorTorqueById(self, motor_id, torque):
-    self._pybullet_client.setJointMotorControl2(
-        bodyIndex=self.quadruped,
-        jointIndex=motor_id,
-        controlMode=self._pybullet_client.TORQUE_CONTROL,
-        force=torque)
-
-  def _SetDesiredMotorAngleById(self, motor_id, desired_angle):
-    self._pybullet_client.setJointMotorControl2(
-        bodyIndex=self.quadruped,
-        jointIndex=motor_id,
-        controlMode=self._pybullet_client.POSITION_CONTROL,
-        targetPosition=desired_angle,
-        positionGain=self._kp,
-        velocityGain=self._kd,
-        force=self._max_force)
-
-  def _SetDesiredMotorAngleByName(self, motor_name, desired_angle):
-    self._SetDesiredMotorAngleById(self._joint_name_to_id[motor_name],
-                                   desired_angle)
 
   # def ResetPose(self, add_constraint):
   #   #del add_constraint
@@ -300,37 +300,18 @@ class mdoger7(object):
     #     force=low_friction_force)
 
   def CheckJointContact(self):
-    """检查指定的连杆是否与地面接触。
-
-    Returns:
-      dict: 一个字典，键为连杆名，值为布尔值，表示是否与地面接触。
-      """
+    """
+    @brief: 检查指定的连杆是否与地面接触。
+    @return: 表示是否与地面接触。
+    """
     link_names = [
         "lf1_joint", "lf2_joint", "lf3_joint", "rf1_joint", "rf2_joint",
         "rf3_joint", "lb1_joint", "lb2_joint", "lb3_joint", "rb1_joint",
         "rb2_joint", "rb3_joint"
     ]
 
-    # 获取所有与地面的接触点
-    # contact_points = self._pybullet_client.getContactPoints(bodyA=self.ground_id, bodyB=self.quadruped)
-
-    # 初始化接触检测结果
-    # contact_detected = {name: False for name in link_names}
-    # collision_count = 0
-    # 检查接触
-    # for contact in contact_points:
-    #     link_id = contact[3]  # 接触的连杆 ID
-    #     for name in link_names:
-    #         if self._joint_name_to_id[name] == link_id:
-    #           contact_detected[name] = True
-    #           collision_count += 1
-    # print('**************')
-    # print('collision_count:', collision_count)
-    # return collision_count
-
     # 初始化接触检测结果
     collision_count = False
-    # contact_detected = {name: False for name in link_names}
     # 转换为连杆 ID
     motor_joint_ids = [self._joint_name_to_id[name] for name in link_names]
     # 获取所有接触点
@@ -341,35 +322,26 @@ class mdoger7(object):
       link_id = contact[4]  # 接触的连杆 ID
       if link_id in motor_joint_ids:
         collision_count = True
-        # joint_name = link_names[motor_joint_ids.index(link_id)]
-        # contact_detected[joint_name] = True
-        # print('collision_count:', collision_count)
     return collision_count
 
   # def CheckJointContact(self):
   #   """
   #   检查特定关节是否与地面接触。
-
   #   Args:
   #     ground_id (int): 地面的ID。
-
   #   Returns:
   #     dict: 一个字典，包含关节名称和它们是否与地面接触的信息。
   #   """
   #   contact_detected = {}
   #   # 关节名称
   #   joints_to_check = ["_foot_"]
-
   #   # 获取子链ID
   #   link_ids_to_check = [self._joint_name_to_id[joint] for joint in joints_to_check]
-
   #   # 检测接触
   #   contact_points = self._pybullet_client.getContactPoints(bodyA=self.quadruped, bodyB=self.ground_id)
-
   #   # 初始化字典
   #   for joint in joints_to_check:
   #       contact_detected[joint] = False
-
   #   joint_contact_count = 0
   #   # 分析接触点
   #   for contact in contact_points:
@@ -384,10 +356,8 @@ class mdoger7(object):
 
   # def CheckJointContact(self, joint_name_suffix="_3_joint"):
   #       """检查是否有任何名为'joint_name_suffix'的关节接触到了任何东西。
-
   #       Args:
   #         joint_name_suffix: 要检查的关节名称后缀。
-
   #       Returns:
   #         一个布尔值，如果有任何名为'joint_name_suffix'的关节发生接触，则为True。
   #       """
@@ -546,8 +516,8 @@ class mdoger7(object):
               self._overheat_counter[i] += 1
             else:
               self._overheat_counter[i] = 0
-            if (self._overheat_counter[i] >
-                OVERHEAT_SHUTDOWN_TIME / self.time_step):
+            if (self._overheat_counter[i]
+                > OVERHEAT_SHUTDOWN_TIME / self.time_step):
               self._motor_enabled_list[i] = False
 
         # The torque is already in the observation space because we use

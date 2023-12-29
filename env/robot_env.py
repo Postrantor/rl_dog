@@ -6,6 +6,9 @@ This file implements the gym environment of mdoger7.
 import os
 import math
 import time
+import random
+import importlib_metadata
+# virtual
 import gym
 from gym import spaces
 from gym.utils import seeding
@@ -13,12 +16,11 @@ import numpy as np
 import pybullet
 from pybullet_utils import bullet_client as bc
 import pybullet_data
-import importlib_metadata
+from pybullet_envs.bullet.env_randomizer_base import EnvRandomizerBase
+# self
+from env import robot_model
 
-# from self
-from env import mdoger7
-from env import mdoger7_env_randomizer
-
+# robot range
 NUM_SUBSTEPS = 5
 NUM_MOTORS = 12
 MOTOR_ANGLE_OBSERVATION_INDEX = 0
@@ -30,16 +32,78 @@ OBSERVATION_EPS = 0.02
 RENDER_HEIGHT = 720
 RENDER_WIDTH = 960
 
+# env randomizer range
+## relative range.
+BASE_MASS_ERROR_RANGE = (-0.2, 0.2)  # -/+20%
+LEG_MASS_ERROR_RANGE = (-0.2, 0.2)  # -/+20%
+## absolute range
+BATTERY_VOLTAGE_RANGE = (24.8, 26.8)  # unit: volt
+MOTOR_VISCOUS_DAMPING_RANGE = (0, 0.1)  # N·m·s/rad (转矩/角速度)
+LEG_FRICTION = (0.8, 1.5)  # 无单位(无量纲)
 
-class mdoger7BulletEnv(gym.Env):
-  """The gym environment for the mdoger7.
+
+class EnvRandomizer(EnvRandomizerBase):
+  """
+  一个在每次重置时改变 gym env 的随机器。
+  """
+
+  def __init__(self,
+               base_mass_err_range=BASE_MASS_ERROR_RANGE,
+               leg_mass_err_range=LEG_MASS_ERROR_RANGE,
+               battery_voltage_range=BATTERY_VOLTAGE_RANGE,
+               motor_viscous_damping_range=MOTOR_VISCOUS_DAMPING_RANGE):
+    self._base_mass_err_range = base_mass_err_range
+    self._leg_mass_err_range = leg_mass_err_range
+    self._battery_voltage_range = battery_voltage_range
+    self._motor_viscous_damping_range = motor_viscous_damping_range
+
+  def randomize_env(self, env):
+    self._randomize_(env.mdoger7)
+
+  def _randomize_(self, mdoger7):
+    """
+    @brief: 随机改变模型的各种物理属性
+          它在每次环境重置(`reset()`)时随机化基座、腿部的质量/惯性、足部的摩擦系数、电池电压和电机阻尼.
+    @param: mdoger7: 位于mdoger7_gym_env环境中的mdoger7实例.
+    """
+    base_mass = mdoger7.GetBaseMassFromURDF()
+    randomized_base_mass = random.uniform(
+        base_mass * (1.0 + self._base_mass_err_range[0]),
+        base_mass * (1.0 + self._base_mass_err_range[1]))
+    mdoger7.SetBaseMass(randomized_base_mass)
+
+    leg_masses = mdoger7.GetLegMassesFromURDF()
+    leg_masses_lower_bound = np.array(leg_masses) * (
+        1.0 + self._leg_mass_err_range[0])
+    leg_masses_upper_bound = np.array(leg_masses) * (
+        1.0 + self._leg_mass_err_range[1])
+    randomized_leg_masses = [
+        np.random.uniform(leg_masses_lower_bound[i], leg_masses_upper_bound[i])
+        for i in range(len(leg_masses))
+    ]
+    mdoger7.SetLegMasses(randomized_leg_masses)
+
+    randomized_battery_voltage = random.uniform(BATTERY_VOLTAGE_RANGE[0],
+                                                BATTERY_VOLTAGE_RANGE[1])
+    mdoger7.SetBatteryVoltage(randomized_battery_voltage)
+
+    randomized_motor_damping = random.uniform(MOTOR_VISCOUS_DAMPING_RANGE[0],
+                                              MOTOR_VISCOUS_DAMPING_RANGE[1])
+    mdoger7.SetMotorViscousDamping(randomized_motor_damping)
+
+    randomized_foot_friction = random.uniform(LEG_FRICTION[0], LEG_FRICTION[1])
+    mdoger7.SetFootFriction(randomized_foot_friction)
+
+
+class BulletEnv(gym.Env):
+  """
+  The gym environment for the mdoger7.
 
   It simulates the locomotion of a mdoger7, a quadruped robot. The state space
   include the angles, velocities and torques for all the motors and the action
   space is the desired motor angle for each motor. The reward function is based
   on how far the mdoger7 walks in 1000 steps and penalizes the energy
   expenditure.
-
   """
   metadata = {
       "render.modes": ["human", "rgb_array"],
@@ -70,42 +134,31 @@ class mdoger7BulletEnv(gym.Env):
       on_rack=False,
       render=True,
       kd_for_pd_controllers=0.3,
-      env_randomizer=mdoger7_env_randomizer.EnvRandomizer()):
-    """Initialize the mdoger7 gym environment.
-
-    Args:
-      urdf_root: The path to the urdf data folder.
-      action_repeat: The number of simulation steps before actions are applied.
-      distance_weight: The weight of the distance term in the reward.
-      energy_weight: The weight of the energy term in the reward.
-      shake_weight: The weight of the vertical shakiness term in the reward.
-      drift_weight: The weight of the sideways drift term in the reward.
-      distance_limit: The maximum distance to terminate the episode.
-      observation_noise_stdev: The standard deviation of observation noise.
-      self_collision_enabled: Whether to enable self collision in the sim.
-      motor_velocity_limit: The velocity limit of each motor.
-      pd_control_enabled: Whether to use PD controller for each motor.
-      leg_model_enabled: Whether to use a leg motor to reparameterize the action
-        space.
-      accurate_motor_model_enabled: Whether to use the accurate DC motor model.
-      motor_kp: proportional gain for the accurate motor model.
-      motor_kd: derivative gain for the accurate motor model.
-      torque_control_enabled: Whether to use the torque control, if set to
-        False, pose control will be used.
-      motor_overheat_protection: Whether to shutdown the motor that has exerted
-        large torque (OVERHEAT_SHUTDOWN_TORQUE) for an extended amount of time
-        (OVERHEAT_SHUTDOWN_TIME). See ApplyAction() in minitaur.py for more
-        details.
-      hard_reset: Whether to wipe the simulation and load everything when reset
-        is called. If set to false, reset just place the minitaur back to start
-        position and set its pose to initial configuration.
-      on_rack: Whether to place the minitaur on rack. This is only used to debug
-        the walking gait. In this mode, the minitaur's base is hanged midair so
-        that its walking gait is clearer to visualize.
-      render: Whether to render the simulation.
-      kd_for_pd_controllers: kd value for the pd controllers of the motors
-      env_randomizer: An EnvRandomizer to randomize the physical properties
-        during reset().
+      env_randomizer=EnvRandomizer()):
+    """
+    @brief: Initialize the mdoger7 gym environment.
+    @param: urdf_root: The path to the urdf data folder.
+    @param: action_repeat: The number of simulation steps before actions are applied.
+    @param: distance_weight: The weight of the distance term in the reward.
+    @param: energy_weight: The weight of the energy term in the reward.
+    @param: shake_weight: The weight of the vertical shakiness term in the reward.
+    @param: drift_weight: The weight of the sideways drift term in the reward.
+    @param: distance_limit: The maximum distance to terminate the episode.
+    @param: observation_noise_stdev: The standard deviation of observation noise.
+    @param: self_collision_enabled: Whether to enable self collision in the sim.
+    @param: motor_velocity_limit: The velocity limit of each motor.
+    @param: pd_control_enabled: Whether to use PD controller for each motor.
+    @param: leg_model_enabled: Whether to use a leg motor to reparameterize the action space.
+    @param: accurate_motor_model_enabled: Whether to use the accurate DC motor model.
+    @param: motor_kp: proportional gain for the accurate motor model.
+    @param: motor_kd: derivative gain for the accurate motor model.
+    @param: torque_control_enabled: Whether to use the torque control, if set to False, pose control will be used.
+    @param: motor_overheat_protection: Whether to shutdown the motor that has exerted large torque (OVERHEAT_SHUTDOWN_TORQUE) for an extended amount of time (OVERHEAT_SHUTDOWN_TIME). See ApplyAction() in minitaur.py for more details.
+    @param: hard_reset: Whether to wipe the simulation and load everything when reset is called. If set to false, reset just place the minitaur back to start position and set its pose to initial configuration.
+    @param: on_rack: Whether to place the minitaur on rack. This is only used to debug the walking gait. In this mode, the minitaur's base is hanged midair so that its walking gait is clearer to visualize.
+    @param: render: Whether to render the simulation.
+    @param: kd_for_pd_controllers: kd value for the pd controllers of the motors
+    @param: env_randomizer: An EnvRandomizer to randomize the physical properties during reset().
     """
     self._time_step = 0.01
     self._action_repeat = action_repeat
@@ -138,7 +191,6 @@ class mdoger7BulletEnv(gym.Env):
     self._hard_reset = True
     self._kd_for_pd_controllers = kd_for_pd_controllers
     self._last_frame_time = 0.0
-    print("urdf_root=" + self._urdf_root)
     self._env_randomizer = env_randomizer
     # PD control needs smaller time step for stability.
     if pd_control_enabled or accurate_motor_model_enabled:
@@ -188,23 +240,21 @@ class mdoger7BulletEnv(gym.Env):
       acc_motor = self._accurate_motor_model_enabled
       motor_protect = self._motor_overheat_protection
 
-      mdoger7_urdf_path = os.path.join(os.path.dirname(__file__),
-                                       '/../mdoger7/urdf/')
-      self.mdoger7 = (
-          mdoger7.mdoger7(
-              pybullet_client=self._pybullet_client,
-              #  urdf_root=self._urdf_root,
-              urdf_root=mdoger7_urdf_path,
-              self_collision_enabled=self._self_collision_enabled,
-              motor_velocity_limit=self._motor_velocity_limit,
-              pd_control_enabled=self._pd_control_enabled,
-              accurate_motor_model_enabled=acc_motor,
-              motor_kp=self._motor_kp,
-              motor_kd=self._motor_kd,
-              torque_control_enabled=self._torque_control_enabled,
-              motor_overheat_protection=motor_protect,
-              on_rack=self._on_rack,
-              kd_for_pd_controllers=self._kd_for_pd_controllers))
+      robot_urdf_path = os.path.join(os.path.dirname(__file__),
+                                     '/../mdoger7/urdf/')
+      self.mdoger7 = robot_model.mdoger7(
+          pybullet_client=self._pybullet_client,
+          urdf_root=robot_urdf_path,
+          self_collision_enabled=self._self_collision_enabled,
+          motor_velocity_limit=self._motor_velocity_limit,
+          pd_control_enabled=self._pd_control_enabled,
+          accurate_motor_model_enabled=acc_motor,
+          motor_kp=self._motor_kp,
+          motor_kd=self._motor_kd,
+          torque_control_enabled=self._torque_control_enabled,
+          motor_overheat_protection=motor_protect,
+          on_rack=self._on_rack,
+          kd_for_pd_controllers=self._kd_for_pd_controllers)
     else:
       self.mdoger7.Reset(reload_urdf=False)
 

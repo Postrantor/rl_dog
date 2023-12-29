@@ -7,17 +7,14 @@
 # get logger
 from sac import SAC2Agent, train_loop
 from logger.logger import Logger
-
-from env import mdoger7_gym_env as e
-
-logger = Logger().get_logger()
+import env.robot_env as e
 
 # @brief 创建BulletEnv环境对象
 # @param render: 是否显示图形界面
 # @param drift_weight: 漂移权重
 # @param shake_weight: 摇晃权重
 # @param energy_weight: 能量权重
-env = e.mdoger7BulletEnv(render=False,
+env = e.BulletEnv(render=True,
                          drift_weight=5,
                          shake_weight=5,
                          energy_weight=0.5)
