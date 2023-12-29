@@ -12,9 +12,8 @@ from gym.utils import seeding
 import numpy as np
 import pybullet
 from pybullet_utils import bullet_client as bc
-import os
 import pybullet_data
-from pkg_resources import parse_version
+import importlib_metadata
 
 # from self
 from env import mdoger7
@@ -461,8 +460,7 @@ class mdoger7BulletEnv(gym.Env):
                       self.mdoger7.GetObservationUpperBound())
     return observation
 
-  if parse_version(gym.__version__) < parse_version('0.9.6'):
-    # print('--- --- --- {}'.format(parse_version(gym.__version__), parse_version('0.9.6')))
+  if importlib_metadata.version('gym') < "0.9.6":
     _render = render
     _reset = reset
     _seed = seed
