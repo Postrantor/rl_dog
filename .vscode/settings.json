@@ -1,0 +1,467 @@
+{
+  "workbench.panel.defaultLocation": "right",
+  // --- --- --- editor --- --- ---
+  "editor.tabSize": 2,
+  "editor.fontSize": 17,
+  "editor.rulers": [110],
+  "editor.wordWrap": "on",
+  "editor.wordWrapColumn": 120,
+  "editor.fontFamily": "'trantor', 'CaskaydiaCove Nerd Font Mono', 'ubuntu mono'",
+  "editor.formatOnType": true, // 输入结束标识(如，C/C++的分号)后自动格式化当前这一行的代码
+  "editor.formatOnSave": true,
+  "editor.acceptSuggestionOnEnter": "off", // 按回车时一定是真正的换行，只有tab才会接受Intellisense
+  "editor.suggestSelection": "first",
+  "editor.tabCompletion": "on",
+  "editor.snippetSuggestions": "inline", // snippets显示在补全列表顶端(top)，默认是inline
+  // "editor.suggest.snippetsPreventQuickSuggestions": false, // clangd的snippets有很多的跳转点，否则须手动触发Intellisense
+  // --- --- --- formatter --- --- ---
+  // https://dev.to/robole/vs-code-you-dont-need-a-formatting-extension-prettier-and-friends-26cm
+  "[html]": {
+    "editor.defaultFormatter": "vscode.html-language-features"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "vscode.typescript-language-features"
+  },
+  "[javascriptreact]": {
+    "editor.defaultFormatter": "vscode.typescript-language-features"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "vscode.typescript-language-features"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "vscode.json-language-features"
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[css]": {
+    "editor.defaultFormatter": "vscode.css-language-features"
+  },
+  "[scss]": {
+    "editor.defaultFormatter": "vscode.css-language-features"
+  },
+  "[less]": {
+    "editor.defaultFormatter": "vscode.css-language-features"
+  },
+  // --- --- --- files --- --- ---
+  "files.autoSaveDelay": 3000,
+  "files.autoSave": "afterDelay",
+  "files.associations": {
+    "*.m": "matlab",
+    ".clang-format": "markdown"
+  },
+  "files.autoGuessEncoding": true,
+  "files.exclude": {
+    "**/.classpath": true,
+    "**/.project": true,
+    "**/.settings": true,
+    "**/.factorypath": true
+  },
+  // "files.defaultLanguage": "c", // 默认的语言
+  "debug.console.lineHeight": 18,
+  // --- --- --- explorer --- --- ---
+  "explorer.confirmDragAndDrop": false,
+  "explorer.confirmDelete": false,
+  // --- --- --- terminal --- --- ---
+  "terminal.integrated.fontSize": 18,
+  "terminal.integrated.fontFamily": "'trantor_mono', 'CaskaydiaCove Nerd Font Mono', 'ubuntu mono'",
+  "terminal.integrated.inheritEnv": false,
+  // --- --- --- remote --- --- ---
+  "remote.SSH.remotePlatform": {
+    "postrantor.natapp1.cc": "windows",
+    "ubuntu2204": "linux",
+    "p7xxtm1": "windows",
+    "noetic": "linux",
+    "rpi": "linux"
+  },
+  // "remote.SSH.useLocalServer": false,
+  // --- --- --- workbench --- --- ---
+  "workbench.startupEditor": "none", //预览状态打开新的文件
+  "workbench.editorAssociations": {
+    "*.ipynb": "jupyter-notebook",
+    "*.py": "default"
+  },
+  // "workbench.startupEditor": "newUntitledFile",
+  "workbench.colorCustomizations": {
+    // "activityBarBadge.background": "#AB47BC",
+    // "activityBar.activeBorder": "#AB47BC",
+    // "list.activeSelectionForeground": "#AB47BC",
+    // "list.inactiveSelectionForeground": "#AB47BC",
+    // "list.highlightForeground": "#AB47BC",
+    // "scrollbarSlider.activeBackground": "#AB47BC50",
+    // "editorSuggestWidget.highlightForeground": "#AB47BC",
+    // "textLink.foreground": "#AB47BC",
+    // "progressBar.background": "#AB47BC",
+    // "pickerGroup.foreground": "#AB47BC",
+    // "tab.activeBorder": "#AB47BC",
+    // "notificationLink.foreground": "#AB47BC",
+    // "editorWidget.resizeBorder": "#AB47BC",
+    // "editorWidget.border": "#AB47BC",
+    // "settings.modifiedItemIndicator": "#AB47BC",
+    // "settings.headerForeground": "#AB47BC",
+    // "panelTitle.activeBorder": "#AB47BC",
+    // "breadcrumb.activeSelectionForeground": "#AB47BC",
+    // "menu.selectionForeground": "#AB47BC",
+    // "menubar.selectionForeground": "#AB47BC",
+    // "editor.findMatchBorder": "#AB47BC",
+    // "selection.background": "#AB47BC40",
+    // "statusBarItem.remoteBackground": "#AB47BC"
+  },
+  // --- --- --- Git --- --- ---
+  // 解决CPU占用问题：[禁用vscode中自带git使用](https://www.ngui.cc/el/3192014.html?action=onClick)
+  // "git.confirmSync": false,
+  // "git.enabled": false,
+  // "git.path": null,
+  // "git.autofetch": false,
+  // --- --- --- markdown --- --- ---
+  "markdown-preview-enhanced.previewTheme": "one-dark.css",
+  "[markdown]": {
+    "editor.quickSuggestions": {
+      "comments": "on",
+      "strings": "on",
+      "other": "on"
+    },
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "markdown.preview.fontSize": 18,
+  "markdown.preview.fontFamily": "Trantor, -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif",
+  // --- --- --- Python --- --- ---
+  "python.formatting.provider": "yapf",
+  "python.defaultInterpreterPath": "C:\\Users\\trantor\\anaconda3\\python.exe",
+  "python.pythonPath": "C:\\Users\\trantor\\anaconda3\\envs\\demo\\python.exe",
+  "python.jediMemoryLimit": 0, // 代码自动补全
+  "python.autoComplete.addBrackets": true, // 自动补全代码，非智能提示
+  "python.analysis.completeFunctionParens": true,
+  "python.terminal.activateEnvInCurrentTerminal": true,
+  "python.globalModuleInstallation": true,
+  "python.languageServer": "Pylance",
+  "jupyter.askForKernelRestart": false,
+  // "jupyter.allowLiveShare": false,
+  "jupyter.exportWithOutputEnabled": true,
+  "jupyter.alwaysTrustNotebooks": true,
+  // "[python]": {
+  //   "editor.defaultFormatter": "ms-python.black-formatter",
+  //   "editor.formatOnSave": true
+  // }
+  // --- --- --- Extensions --- --- ---
+  "vsintellicode.features.python.deepLearning": "enabled",
+  "vsintellicode.modify.editor.suggestSelection": "automaticallyOverrodeDefaultValue",
+  // --- --- --- C_CPP --- --- ---
+  // 下面这两行是可以自动更改编码的，但是要先被vscode识别为对应语言，比如第一行写了`#include`
+  // 这时候再保存，就会被编辑器自动添加.c的后缀，相应的编码格式也会变为GBK了。
+  // "[cpp]": {"files.encoding": "gbk"},
+  // "[c]": {"files.encoding": "gbk"},
+  "C_Cpp.clang_format_sortIncludes": true, // 格式化时调整include的顺序（按字母排序）
+  "C_Cpp.autocompleteAddParentheses": true,
+  "[c]": {
+    "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
+  },
+  "[cpp]": {
+    "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
+  },
+  // "uncrustify.configPath.windows": "${workspaceFolder}/.vscode/ament_code_style.cfg",
+  // "uncrustify.configPath.linux": "uncrustify.cfg",
+  // "C_Cpp.clang_format_style": "file:C:/Protable/Code/cpp/format/.clang-format",
+  // --- --- --- cmake --- --- ---
+  "cmake.configureOnOpen": false,
+  "cmake.cmakePath": "cmake",
+  "cmake.configureSettings": {
+    "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+  },
+  "cmake.useCMakePresets": "always",
+  // --- --- --- MATLAB --- --- ---
+  "matlab.mlintpath": "C:\\Program Files\\MATLAB\\R2023b\\bin\\win64\\mlint.exe",
+  "matlab.linterEncoding": "gbk",
+  "[matlab]": {
+    "files.encoding": "gbk",
+    "editor.defaultFormatter": "MathWorks.language-matlab"
+  },
+  // --- --- --- Terminal --- --- ---
+  // "terminal.integrated.shell.linux": "/bin/bash",
+  "terminal.integrated.profiles.windows": {
+    "Windows PowerShell": {
+      "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+    },
+    "PowerShell": {
+      "source": "PowerShell",
+      "icon": "terminal-powershell"
+    },
+    "Command Prompt": {
+      "path": ["${env:windir}\\System32\\cmd.exe"],
+      "args": [],
+      "icon": "terminal-cmd"
+    },
+    "Git Bash": {
+      "source": "Git Bash"
+    }
+  },
+  // --- --- --- code-runner --- --- ---
+  // https://github.com/formulahendry/vscode-code-runner#:~:text=into-,code-runner.executormap,-to
+  "code-runner.runInTerminal": true, // 设置成false会在“输出”中输出，无法输入
+  "code-runner.saveFileBeforeRun": true, // run code前保存
+  "code-runner.preserveFocus": true, // 若为false，run code后光标会聚焦到终端上
+  "code-runner.clearPreviousOutput": true,
+  "code-runner.executorMap": {
+    "c": "cd $dir && gcc '$fileName' -o '$fileNameWithoutExt.exe' -Wall -O2 -m64 -lm -static-libgcc -fexec-charset=GBK -D__USE_MINGW_ANSI_STDIO && &'./$fileNameWithoutExt.exe'",
+    "cpp": "cd $dir && g++ '$fileName' -o '$fileNameWithoutExt.exe' -Wall -O2 -m64 -static-libgcc -fexec-charset=GBK && &'./$fileNameWithoutExt.exe'"
+  },
+  // --- --- --- LaTeX --- --- ---
+  // [LaTeX技巧932：如何配置Visual Studio Code作为LaTeX编辑器[新版更新] - LaTeX科技排版工作室](https://www.latexstudio.net/archives/12260.html)
+  "latex-workshop.latex.recipes": [
+    {
+      "name": "PDFLaTeX",
+      "tools": ["pdflatex"]
+    },
+    {
+      "name": "XeLaTeX",
+      "tools": ["xelatex"]
+    },
+    {
+      "name": "latexmk",
+      "tools": ["latexmk"]
+    },
+    {
+      "name": "BibTeX",
+      "tools": ["bibtex"]
+    },
+    {
+      "name": "pdflatex -> bibtex -> pdflatex*2",
+      "tools": ["pdflatex", "bibtex", "pdflatex", "pdflatex"]
+    },
+    {
+      "name": "xelatex -> bibtex -> xelatex*2",
+      "tools": ["xelatex", "bibtex", "xelatex", "xelatex"]
+    }
+  ],
+  "latex-workshop.latex.tools": [
+    {
+      // 编译工具和命令
+      "name": "xelatex",
+      "command": "xelatex",
+      "args": [
+        "-synctex=1",
+        "-interaction=nonstopmode",
+        "-file-line-error",
+        // "-pdf",
+        "%DOCFILE%"
+      ]
+    },
+    {
+      "name": "pdflatex",
+      "command": "pdflatex",
+      "args": [
+        "-synctex=1",
+        "-interaction=nonstopmode",
+        "-file-line-error",
+        "%DOCFILE%"
+      ]
+    },
+    {
+      "name": "bibtex",
+      "command": "bibtex",
+      "args": ["%DOCFILE%"]
+    }
+  ],
+  "latex-workshop.view.pdf.viewer": "tab",
+  "latex-workshop.latex.clean.fileTypes": [
+    "*.aux",
+    "*.bbl",
+    "*.blg",
+    "*.idx",
+    "*.ind",
+    "*.lof",
+    "*.lot",
+    "*.out",
+    "*.toc",
+    "*.acn",
+    "*.acr",
+    "*.alg",
+    "*.glg",
+    "*.glo",
+    "*.gls",
+    "*.ist",
+    "*.fls",
+    "*.log",
+    "*.fdb_latexmk"
+  ],
+  // --- --- --- --- --- --- ---
+  "json.maxItemsComputed": 50000,
+  "notebook.kernelProviderAssociations": [
+    {
+      "viewType": "jupyter-notebook",
+      "kernelProvider": "ms-toolsai.jupyter"
+    }
+  ],
+  "codetour.showMarkers": false,
+  "notebook.cellToolbarLocation": {
+    "default": "right",
+    "jupyter-notebook": "left"
+  },
+  "svg.preview.mode": "img",
+  // --- --- --- settingsSync --- --- ---
+  "settingsSync.ignoredSettings": [
+    "code-runner.executorMapByFileExtension",
+    "code-runner.executorMap"
+    // "python.defaultInterpreterPath"
+  ],
+  "problems.showCurrentInStatus": true,
+  // --- --- --- snippet --- --- ---
+  "emmet.showSuggestionsAsSnippets": true,
+  // --- --- --- --- --- ---
+  "extensions.autoUpdate": false, //true,
+  "security.workspace.trust.banner": "never",
+  "security.workspace.trust.emptyWindow": false,
+  "security.workspace.trust.untrustedFiles": "open",
+  "security.workspace.trust.startupPrompt": "never",
+  // "go.toolsManagement.autoUpdate": true,
+
+  "docs-build.userType": "Public Contributor",
+  "terminal.integrated.defaultProfile.windows": "Windows PowerShell",
+  "terminal.integrated.defaultProfile.linux": "zsh",
+  "editor.unicodeHighlight.ambiguousCharacters": false,
+  "editor.unicodeHighlight.nonBasicASCII": false,
+  "editor.accessibilitySupport": "off",
+  "extensions.supportUntrustedWorkspaces": {
+    "apommel.matlab-interactive-terminal": {
+      "supported": true,
+      "version": "0.4.0"
+    },
+    "albymor.increment-selection": {
+      "supported": true,
+      "version": "0.2.0"
+    },
+    "oderwat.indent-rainbow": {
+      "supported": true,
+      "version": "8.3.1"
+    },
+    "sirtori.indenticator": {
+      "supported": true,
+      "version": "0.7.0"
+    },
+    "yzhang.markdown-all-in-one": {
+      "supported": true,
+      "version": "3.4.3"
+    },
+    "phoihos.markdown-markmap": {
+      "supported": true,
+      "version": "1.4.5"
+    },
+    "bierner.markdown-mermaid": {
+      "supported": true,
+      "version": "1.14.0"
+    },
+    "gera2ld.markmap-vscode": {
+      "supported": true,
+      "version": "0.0.13"
+    },
+    "affenwiesel.matlab-formatter": {
+      "supported": true,
+      "version": "2.9.1"
+    },
+    "gimly81.matlab": {
+      "supported": true,
+      "version": "2.3.1"
+    },
+    "shuworks.vscode-table-formatter": {
+      "supported": true,
+      "version": "1.2.1"
+    },
+    "esbenp.prettier-vscode": {
+      "supported": true,
+      "version": "9.5.0"
+    },
+    "coenraads.bracket-pair-colorizer-2": {
+      "supported": true,
+      "version": "0.2.4"
+    },
+    "austin.code-gnu-global": {
+      "supported": true,
+      "version": "0.2.2"
+    },
+    "shardulm94.trailing-spaces": {
+      "supported": true,
+      "version": "0.3.1"
+    },
+    "sharzyl.cjk-word-handler": {
+      "supported": true,
+      "version": "0.1.1"
+    },
+    "vscode.markdown-language-features": {
+      "supported": true,
+      "version": "1.0.0"
+    },
+    "funkyremi.vscode-google-translate": {
+      "supported": true,
+      "version": "1.4.13"
+    }
+  },
+  "window.commandCenter": false,
+  "[python]": {
+    "editor.formatOnType": true
+  },
+  "powershell.promptToUpdatePowerShell": false,
+
+  "vscodeGoogleTranslate.preferredLanguage": "Chinese (Simplified)",
+  // ====== ====== ======
+  // openai
+  // ====== ====== ======
+  // "genieai.openai.maxTokens": 8000,
+  // "genieai.openai.model": "gpt-4",
+  "genieai.promptPrefix.explain": "下面这段代码是 C++ 编写的代码，请以此为基础，1. 用支持 doxygen 的形式为如下的代码段添加参数列表的说明，从功能和cpp语法的角度对代码段的每一部分添加详细的中文注释，将函数功能的总结和梳理添加到 `@details` 字段中; 2. 并以中文的形式对代码块中的每一行都尽可能的添加详细的注释; 3. 注意，不要限制字符，请对内容进行完整的注释，不要省略内容; 4. 对于已经存在的注释，保留内容并翻译为中文填在在原处; 5. 添加的中文注释需要尽可能详细，因为我只是个初学者需要了解更多。示例如下：`% @brief % @param % @details % @note`",
+  "genieai.promptPrefix.addComments": "下面这段代码是ROS1中的项目适用于四足机器狗的控制，使用python语言编写的，请以此为基础，1. 用支持 doxygen 的形式为如下的代码段添加参数列表的说明，从功能和语法的角度对代码段的每一部分添加详细的中文注释，将函数功能的总结和梳理添加到 `@details` 字段中; 2. 并以中文的形式对代码块中的每一行都尽可能的添加详细的注释; 3. 注意，不要限制字符，请对内容进行完整的注释，不要省略内容; 4. 对于已经存在的注释，保留内容并翻译为中文填在在原处; 5. 添加的中文注释需要尽可能详细，因为我只是个初学者需要了解更多。示例如下：`#brief #param #details #note`",
+  // "genieai.promptPrefix.addComments": "下面这段代码是在 ros2 项目中 ros2_planning_system 组件相关的代码，请以此为基础，满足下面的要求：1. 注意！从功能和cpp语法的角度对代码段的每一部分添加详细的中文注释；2. 对代码段的功能进行详细的总结和梳理(以1,2,3...的格式组织内容)，将其添加到注释中的 “@details” 字段；3. 添加参数列表的说明(一定要以支持 doxygen 的格式作为注释添加到代码段中)；4. 对代码中的已有的英文注释，翻译为中文。示例如下：/** * @brief * @param * @details  */。最后将输出内容通过 '```' 进行包含，以符合 markdown 格式。",
+  "genieai.promptPrefix.customPrompt1-enabled": true,
+  "genieai.promptPrefix.customPrompt1": "请将这段话翻译为中文，输出结果以```按照markdown格式引用。最终仅输出翻译内容即可",
+  "genieai.promptPrefix.customPrompt2-enabled": true,
+  "genieai.promptPrefix.customPrompt2": "这是 matlab 中用于代码生成的 TLC 文件，请帮忙添加详细的中文注释。",
+  "genieai.openai.model": "gpt-3.5-turbo-16k",
+  "genieai.openai.maxTokens": 4096,
+  // ====== ====== ======
+  // ====== ====== ======
+  "yaml.customTags": [
+    "!And",
+    "!And sequence",
+    "!If",
+    "!If sequence",
+    "!Not",
+    "!Not sequence",
+    "!Equals",
+    "!Equals sequence",
+    "!Or",
+    "!Or sequence",
+    "!FindInMap",
+    "!FindInMap sequence",
+    "!Base64",
+    "!Join",
+    "!Join sequence",
+    "!Cidr",
+    "!Ref",
+    "!Sub",
+    "!Sub sequence",
+    "!GetAtt",
+    "!GetAZs",
+    "!ImportValue",
+    "!ImportValue sequence",
+    "!Select",
+    "!Select sequence",
+    "!Split",
+    "!Split sequence"
+  ],
+  "C_Cpp.intelliSenseEngine": "default",
+  // "tabnine.experimentalAutoImports": true,
+  "plantuml.server": "http://www.plantuml.com/plantuml",
+  "workbench.layoutControl.enabled": false,
+  "markdown-preview-enhanced.enableScriptExecution": true,
+  "terminal.integrated.enableMultiLinePasteWarning": false,
+  "git.openRepositoryInParentFolders": "always",
+  "workbench.colorTheme": "Bearded Theme Arc",
+  "C_Cpp.codeAnalysis.updateDelay": 6000,
+  "aws.suppressPrompts": {
+    "codeWhispererConnectionExpired": true
+  },
+  "update.enableWindowsBackgroundUpdates": false,
+  "update.mode": "none",
+  "clangd.detectExtensionConflicts": false,
+  "window.zoomLevel": -1,
+  "workbench.editor.empty.hint": "hidden"
+}
