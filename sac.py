@@ -24,6 +24,7 @@ class SACAgent:
   Soft Actor-Critic: Off-Policy Maximum Entropy Deep Reinforcement Learning with a Stochastic Actor,
   Haarnoja et al. 2018
   """
+
   def __init__(self, env, lr=3e-4, replay_buffer_size=1000000):
     """
     :param env: an instance of an OpenAI Gym environment that is being learned on.
@@ -145,6 +146,7 @@ class SAC2Agent:
   Differs from SACAgent by replacing the need for a value function with an entropy temperature parameter and tuning
   this while learning
   """
+
   def __init__(self,
                env,
                alpha=0.1,
@@ -310,7 +312,7 @@ def train_loop(env,
 
     # Step the simulation 5 to stop learning starting midair if it is the minitaur env
     try:
-      env.mdoger7
+      env.robot
       for i in range(5):
         p.stepSimulation()
     except AttributeError:

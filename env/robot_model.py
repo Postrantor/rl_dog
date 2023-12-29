@@ -44,7 +44,7 @@ FOOT_LINK_ID = [3, 7, 11, 115]
 BASE_LINK_ID = -1
 
 
-class mdoger7():
+class Robot():
   """
   The mdoger7 class that simulates a quadruped robot from Ghost Robotics.
   """

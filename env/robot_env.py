@@ -17,20 +17,6 @@ import pybullet
 from pybullet_utils import bullet_client as bc
 import pybullet_data
 from pybullet_envs.bullet.env_randomizer_base import EnvRandomizerBase
-# self
-from env import robot_model
-
-# robot range
-NUM_SUBSTEPS = 5
-NUM_MOTORS = 12
-MOTOR_ANGLE_OBSERVATION_INDEX = 0
-MOTOR_VELOCITY_OBSERVATION_INDEX = MOTOR_ANGLE_OBSERVATION_INDEX + NUM_MOTORS
-MOTOR_TORQUE_OBSERVATION_INDEX = MOTOR_VELOCITY_OBSERVATION_INDEX + NUM_MOTORS
-BASE_ORIENTATION_OBSERVATION_INDEX = MOTOR_TORQUE_OBSERVATION_INDEX + NUM_MOTORS
-ACTION_EPS = 0.02
-OBSERVATION_EPS = 0.02
-RENDER_HEIGHT = 720
-RENDER_WIDTH = 960
 
 # env randomizer range
 ## relative range.
@@ -57,22 +43,19 @@ class EnvRandomizer(EnvRandomizerBase):
     self._battery_voltage_range = battery_voltage_range
     self._motor_viscous_damping_range = motor_viscous_damping_range
 
-  def randomize_env(self, env):
-    self._randomize_(env.mdoger7)
-
-  def _randomize_(self, mdoger7):
+  def randomize_env(self, robot):
     """
     @brief: 随机改变模型的各种物理属性
           它在每次环境重置(`reset()`)时随机化基座、腿部的质量/惯性、足部的摩擦系数、电池电压和电机阻尼.
-    @param: mdoger7: 位于mdoger7_gym_env环境中的mdoger7实例.
+    @param: robot: 位于robot_gym_env环境中的robot实例.
     """
-    base_mass = mdoger7.GetBaseMassFromURDF()
+    base_mass = robot.GetBaseMassFromURDF()
     randomized_base_mass = random.uniform(
         base_mass * (1.0 + self._base_mass_err_range[0]),
         base_mass * (1.0 + self._base_mass_err_range[1]))
-    mdoger7.SetBaseMass(randomized_base_mass)
+    robot.SetBaseMass(randomized_base_mass)
 
-    leg_masses = mdoger7.GetLegMassesFromURDF()
+    leg_masses = robot.GetLegMassesFromURDF()
     leg_masses_lower_bound = np.array(leg_masses) * (
         1.0 + self._leg_mass_err_range[0])
     leg_masses_upper_bound = np.array(leg_masses) * (
@@ -81,18 +64,33 @@ class EnvRandomizer(EnvRandomizerBase):
         np.random.uniform(leg_masses_lower_bound[i], leg_masses_upper_bound[i])
         for i in range(len(leg_masses))
     ]
-    mdoger7.SetLegMasses(randomized_leg_masses)
+    robot.SetLegMasses(randomized_leg_masses)
 
     randomized_battery_voltage = random.uniform(BATTERY_VOLTAGE_RANGE[0],
                                                 BATTERY_VOLTAGE_RANGE[1])
-    mdoger7.SetBatteryVoltage(randomized_battery_voltage)
+    robot.SetBatteryVoltage(randomized_battery_voltage)
 
     randomized_motor_damping = random.uniform(MOTOR_VISCOUS_DAMPING_RANGE[0],
                                               MOTOR_VISCOUS_DAMPING_RANGE[1])
-    mdoger7.SetMotorViscousDamping(randomized_motor_damping)
+    robot.SetMotorViscousDamping(randomized_motor_damping)
 
     randomized_foot_friction = random.uniform(LEG_FRICTION[0], LEG_FRICTION[1])
-    mdoger7.SetFootFriction(randomized_foot_friction)
+    robot.SetFootFriction(randomized_foot_friction)
+
+
+from env.robot_model import Robot
+
+# robot range
+NUM_SUBSTEPS = 5
+NUM_MOTORS = 12
+MOTOR_ANGLE_OBSERVATION_INDEX = 0
+MOTOR_VELOCITY_OBSERVATION_INDEX = MOTOR_ANGLE_OBSERVATION_INDEX + NUM_MOTORS
+MOTOR_TORQUE_OBSERVATION_INDEX = MOTOR_VELOCITY_OBSERVATION_INDEX + NUM_MOTORS
+BASE_ORIENTATION_OBSERVATION_INDEX = MOTOR_TORQUE_OBSERVATION_INDEX + NUM_MOTORS
+ACTION_EPS = 0.02
+OBSERVATION_EPS = 0.02
+RENDER_HEIGHT = 720
+RENDER_WIDTH = 960
 
 
 class BulletEnv(gym.Env):
@@ -160,6 +158,7 @@ class BulletEnv(gym.Env):
     @param: kd_for_pd_controllers: kd value for the pd controllers of the motors
     @param: env_randomizer: An EnvRandomizer to randomize the physical properties during reset().
     """
+
     self._time_step = 0.01
     self._action_repeat = action_repeat
     self._num_bullet_solver_iterations = 300
@@ -192,29 +191,36 @@ class BulletEnv(gym.Env):
     self._kd_for_pd_controllers = kd_for_pd_controllers
     self._last_frame_time = 0.0
     self._env_randomizer = env_randomizer
+
     # PD control needs smaller time step for stability.
     if pd_control_enabled or accurate_motor_model_enabled:
       self._time_step /= NUM_SUBSTEPS
       self._num_bullet_solver_iterations /= NUM_SUBSTEPS
       self._action_repeat *= NUM_SUBSTEPS
 
+    #
     if self._is_render:
       self._pybullet_client = bc.BulletClient(connection_mode=pybullet.GUI)
     else:
       self._pybullet_client = bc.BulletClient()
 
+    #
     self.seed()
     self.reset()
-    observation_high = (self.mdoger7.GetObservationUpperBound() +
+
+    #
+    observation_high = (self.robot.GetObservationUpperBound() +
                         OBSERVATION_EPS)
-    observation_low = (self.mdoger7.GetObservationLowerBound() -
-                       OBSERVATION_EPS)
+    observation_low = (self.robot.GetObservationLowerBound() - OBSERVATION_EPS)
     action_dim = 12
     action_high = np.array([self._action_bound] * action_dim)
+    # 这两个参数用于初始化神经网络，应该拿出去？
     self.action_space = spaces.Box(-action_high, action_high, dtype=np.float32)
     self.observation_space = spaces.Box(observation_low,
                                         observation_high,
                                         dtype=np.float32)
+
+    #
     self.viewer = None
     self._hard_reset = hard_reset  # This assignment need to be after reset()
 
@@ -242,24 +248,23 @@ class BulletEnv(gym.Env):
 
       robot_urdf_path = os.path.join(os.path.dirname(__file__),
                                      '/../mdoger7/urdf/')
-      self.mdoger7 = robot_model.mdoger7(
-          pybullet_client=self._pybullet_client,
-          urdf_root=robot_urdf_path,
-          self_collision_enabled=self._self_collision_enabled,
-          motor_velocity_limit=self._motor_velocity_limit,
-          pd_control_enabled=self._pd_control_enabled,
-          accurate_motor_model_enabled=acc_motor,
-          motor_kp=self._motor_kp,
-          motor_kd=self._motor_kd,
-          torque_control_enabled=self._torque_control_enabled,
-          motor_overheat_protection=motor_protect,
-          on_rack=self._on_rack,
-          kd_for_pd_controllers=self._kd_for_pd_controllers)
+      self.robot = Robot(pybullet_client=self._pybullet_client,
+                         urdf_root=robot_urdf_path,
+                         self_collision_enabled=self._self_collision_enabled,
+                         motor_velocity_limit=self._motor_velocity_limit,
+                         pd_control_enabled=self._pd_control_enabled,
+                         accurate_motor_model_enabled=acc_motor,
+                         motor_kp=self._motor_kp,
+                         motor_kd=self._motor_kd,
+                         torque_control_enabled=self._torque_control_enabled,
+                         motor_overheat_protection=motor_protect,
+                         on_rack=self._on_rack,
+                         kd_for_pd_controllers=self._kd_for_pd_controllers)
     else:
-      self.mdoger7.Reset(reload_urdf=False)
+      self.robot.Reset(reload_urdf=False)
 
     if self._env_randomizer is not None:
-      self._env_randomizer.randomize_env(self)
+      self._env_randomizer.randomize_env(self.robot)
 
     self._env_step_counter = 0
     self._last_base_position = [0, 0, 0]
@@ -271,7 +276,7 @@ class BulletEnv(gym.Env):
     if not self._torque_control_enabled:
       for _ in range(100):
         if self._pd_control_enabled or self._accurate_motor_model_enabled:
-          self.mdoger7.ApplyAction([math.pi] * 12)
+          self.robot.ApplyAction([math.pi] * 12)
         self._pybullet_client.stepSimulation()
     return self._noisy_observation()
 
@@ -286,7 +291,7 @@ class BulletEnv(gym.Env):
                 self._action_bound + ACTION_EPS):
           raise ValueError("{}th action {} out of bounds.".format(
               i, action_component))
-      action = self.mdoger7.ConvertFromLegModel(action)
+      action = self.robot.ConvertFromLegModel(action)
     return action
 
   def step(self, action):
@@ -313,7 +318,7 @@ class BulletEnv(gym.Env):
       time_to_sleep = self._action_repeat * self._time_step - time_spent
       if time_to_sleep > 0:
         time.sleep(time_to_sleep)
-      base_pos = self.mdoger7.GetBasePosition()
+      base_pos = self.robot.GetBasePosition()
       camInfo = self._pybullet_client.getDebugVisualizerCamera()
       # print("camInfo:", camInfo)
       curTargetPos = camInfo[11]
@@ -329,7 +334,7 @@ class BulletEnv(gym.Env):
                                                        base_pos)
     action = self._transform_action_to_motor_command(action)
     for _ in range(self._action_repeat):
-      self.mdoger7.ApplyAction(action)
+      self.robot.ApplyAction(action)
       self._pybullet_client.stepSimulation()
 
     self._env_step_counter += 1
@@ -340,7 +345,7 @@ class BulletEnv(gym.Env):
   def render(self, mode="rgb_array", close=False):
     if mode != "rgb_array":
       return np.array([])
-    base_pos = self.mdoger7.GetBasePosition()
+    base_pos = self.robot.GetBasePosition()
     view_matrix = self._pybullet_client.computeViewMatrixFromYawPitchRoll(
         cameraTargetPosition=base_pos,
         distance=self._cam_dist,
@@ -411,8 +416,8 @@ class BulletEnv(gym.Env):
     Returns:
       Boolean value that indicates whether the mdoger7 has fallen.
     """
-    orientation = self.mdoger7.GetBaseOrientation()
-    position = self.mdoger7.GetBasePosition()
+    orientation = self.robot.GetBaseOrientation()
+    position = self.robot.GetBasePosition()
     rot_mat = self._pybullet_client.getMatrixFromQuaternion(orientation)
     # print("rot_mat:", rot_mat)
     # print("Type of rot_mat:", type(rot_mat))
@@ -430,14 +435,14 @@ class BulletEnv(gym.Env):
     # return (np.dot(np.asarray([1, 0, 0]), np.asarray(local_up_x)) > 0.985 or np.dot(np.asarray([0, 1, 0]), np.asarray(local_up_y)) > 0.9397 or np.dot(np.asarray([0, 0, 1]), np.asarray(local_up_z)) > 0.9397 or pos[2] < 0.3)
 
   def _termination(self):
-    position = self.mdoger7.GetBasePosition()
+    position = self.robot.GetBasePosition()
     distance = math.sqrt(position[0]**2 + position[1]**2)
     condition = self.is_fallen() or (distance > self._distance_limit) or (
-        self.mdoger7.CheckJointContact() > 0)
+        self.robot.CheckJointContact() > 0)
     return condition
 
   def _reward(self):
-    orientation = self.mdoger7.GetBaseOrientation()
+    orientation = self.robot.GetBaseOrientation()
     rot_mat = self._pybullet_client.getMatrixFromQuaternion(orientation)
     # print("rot_mat:", rot_mat)
     # print("Type of rot_mat:", type(rot_mat))
@@ -446,11 +451,11 @@ class BulletEnv(gym.Env):
     local_up_z = rot_mat[6:]
     roll = math.atan2(rot_mat[7], rot_mat[8])
     # theta = - (roll **2)
-    current_base_position = self.mdoger7.GetBasePosition()
+    current_base_position = self.robot.GetBasePosition()
     forward_reward = current_base_position[0] - self._last_base_position[0]
     drift_reward = -abs(current_base_position[1])
     height_reward = -(current_base_position[2] - 0.35)**2
-    xy_velocity, yaw_rate = self.mdoger7.GetBaseVelocity()
+    xy_velocity, yaw_rate = self.robot.GetBaseVelocity()
     target_xy_velocity = [
         5, 5
     ]  # Define these values as per your task requirements
@@ -479,8 +484,8 @@ class BulletEnv(gym.Env):
     self._last_base_position = current_base_position
 
     energy_reward = np.abs(
-        np.dot(self.mdoger7.GetMotorTorques(),
-               self.mdoger7.GetMotorVelocities())) * self._time_step
+        np.dot(self.robot.GetMotorTorques(),
+               self.robot.GetMotorVelocities())) * self._time_step
     reward = (self._distance_weight * forward_reward -
               self._energy_weight * energy_reward +
               self._drift_weight * drift_reward +
@@ -498,7 +503,7 @@ class BulletEnv(gym.Env):
     return self._objectives
 
   def _get_observation(self):
-    self._observation = self.mdoger7.GetObservation()
+    self._observation = self.robot.GetObservation()
     return self._observation
 
   def _noisy_observation(self):
@@ -507,7 +512,7 @@ class BulletEnv(gym.Env):
     if self._observation_noise_stdev > 0:
       observation += (np.random.normal(scale=self._observation_noise_stdev,
                                        size=observation.shape) *
-                      self.mdoger7.GetObservationUpperBound())
+                      self.robot.GetObservationUpperBound())
     return observation
 
   if importlib_metadata.version('gym') < "0.9.6":

@@ -15,9 +15,9 @@ import env.robot_env as e
 # @param shake_weight: 摇晃权重
 # @param energy_weight: 能量权重
 env = e.BulletEnv(render=True,
-                         drift_weight=5,
-                         shake_weight=5,
-                         energy_weight=0.5)
+                  drift_weight=5,
+                  shake_weight=5,
+                  energy_weight=0.5)
 
 # @brief 创建SAC2Agent智能体对象
 # @param env: 环境对象
