@@ -348,6 +348,7 @@ class mdoger7BulletEnv(gym.Env):
       Boolean value that indicates whether the mdoger7 has fallen.
     """
     orientation = self.mdoger7.GetBaseOrientation()
+    position = self.mdoger7.GetBasePosition()
     rot_mat = self._pybullet_client.getMatrixFromQuaternion(orientation)
     # print("rot_mat:", rot_mat)
     # print("Type of rot_mat:", type(rot_mat))
@@ -357,8 +358,7 @@ class mdoger7BulletEnv(gym.Env):
     roll = math.atan2(rot_mat[7], rot_mat[8])
     pitch = math.asin(-rot_mat[6])
     # yaw = math.atan2(rot_mat[3], rot_mat[0])
-    pos = self.mdoger7.GetBasePosition()
-    return np.dot(np.asarray([0, 0, 1]), np.asarray(local_up)) < 0.85 or pos[2] < 0.2 or abs(roll)>0.1 or abs(pitch) > 0.2 or abs(pitch) > 0.1
+    return np.dot(np.asarray([0, 0, 1]), np.asarray(local_up)) < 0.85 or abs(roll)>0.1 or abs(pitch) > 0.2 or abs(pitch) > 0.1 or position[2]<0.25
 
     # return (abs(roll) > 0.174 or abs(pitch) > 0.174 or abs(yaw) > 0.174 or pos[2] < 0.25)
     # return (np.dot(np.asarray([1, 0, 0]), np.asarray(local_up_x)) > 0.985 or np.dot(np.asarray([0, 1, 0]), np.asarray(local_up_y)) > 0.9397 or np.dot(np.asarray([0, 0, 1]), np.asarray(local_up_z)) > 0.9397 or pos[2] < 0.3)
@@ -366,7 +366,8 @@ class mdoger7BulletEnv(gym.Env):
   def _termination(self):
     position = self.mdoger7.GetBasePosition()
     distance = math.sqrt(position[0]**2 + position[1]**2)
-    return self.is_fallen() or distance > self._distance_limit
+    condition = self.is_fallen() or (distance > self._distance_limit) or (self.mdoger7.CheckJointContact() > 0)
+    return condition
 
   def _reward(self):
     orientation = self.mdoger7.GetBaseOrientation()
@@ -381,7 +382,7 @@ class mdoger7BulletEnv(gym.Env):
     current_base_position = self.mdoger7.GetBasePosition()
     forward_reward = current_base_position[0] - self._last_base_position[0]
     drift_reward = -abs(current_base_position[1])
-    height_reward = -(current_base_position[2]-0.3)**2
+    height_reward = -(current_base_position[2]-0.35)**2
     xy_velocity, yaw_rate =  self.mdoger7.GetBaseVelocity()
     target_xy_velocity = [5, 5]  # Define these values as per your task requirements
 

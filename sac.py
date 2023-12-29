@@ -308,7 +308,7 @@ class SAC2Agent:
 	Differs from SACAgent by replacing the need for a value function with an entropy temperature parameter and tuning
 	this while learning
 	"""
-	def __init__(self, env, alpha=0.2, alr=3e-4, qlr=3e-4, policy_lr=3e-4, mem_size=1e6):
+	def __init__(self, env, alpha=0.1, alr=1e-4, qlr=1e-4, policy_lr=1e-4, mem_size=1e6):
 		"""
 		:param env: an instance of an OpenAI Gym environment that is being learned on.
 		:param alpha: float, initial value for alpha
@@ -328,6 +328,7 @@ class SAC2Agent:
 			observation_dim = env.observation_space.n
 
 		self.device = "cuda" if torch.cuda.is_available() else "cpu"
+		# print('--- --- --- %s', device)
 
 		self.q1 = SoftQNetwork(observation_dim, action_dim).to(self.device)
 		self.q2 = SoftQNetwork(observation_dim, action_dim).to(self.device)
@@ -380,8 +381,8 @@ class SAC2Agent:
 		next_q2 = self.target_q2(next_state, next_action)
 		value = torch.min(next_q1, next_q2) - self.alpha * next_log_prob
 		# print("***************************************")
-		print(reward.shape)
-		print(value.shape)
+		# print(reward.shape)
+		# print(value.shape)
 		expected_q = reward + gamma * (1 - done) * value
 
 		q1 = self.q1(state, action)
@@ -475,7 +476,7 @@ def train_loop(env, agent, max_total_steps, max_steps, batch_size, intermediate_
 
 			#FIXME : done的判断存在问题
 			# pdb.set_trace()
-			# done = False
+			done = False
 			# Add state action transition to replay memory
 			# print('action:', action)
 			# print('state:', state)

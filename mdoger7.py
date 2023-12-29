@@ -43,14 +43,13 @@ INIT_MOTOR_ANGLES = [
 #MOTOR_LINK_ID = [1, 4, 7, 10, 14, 17, 20, 23]
 #FOOT_LINK_ID = [3, 6, 9, 12, 16, 19, 22, 25]
 ##BASE_LINK_ID = -1
-#LEG_LINK_ID = [2, 3, 5, 6, 8, 9, 11, 12, 14, 15, 17, 18, 20, 21, 23, 24, 26, 27, 29, 30, 32, 33, 35, 36]
+# LEG_LINK_ID = []
 MOTOR_LINK_ID = [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]
 FOOT_LINK_ID = [3, 7, 11, 115]
 BASE_LINK_ID = -1
 
 class mdoger7(object):
   """The mdoger7 class that simulates a quadruped robot from Ghost Robotics.
-
   """
 
   def __init__(self,
@@ -98,10 +97,10 @@ class mdoger7(object):
     self._self_collision_enabled = self_collision_enabled
     self._motor_velocity_limit = motor_velocity_limit
     self._pd_control_enabled = pd_control_enabled
-    self._motor_direction = [-1, -1, -1, 1, -1, -1, 1, -1, -1, -1, -1, -1]
-    self._h1motor_direction = [-1, -1, -1, 1]
-    self._h2motor_direction = [-1, -1, 1, -1]
-    self._h3motor_direction = [-1, -1, -1, -1]
+    self._motor_direction = [-1, -1, 1, 1, -1, 1, 1, -1, 1, -1, -1, 1]
+    self._h1motor_direction = [-1, -1, 1, 1]
+    self._h2motor_direction = [-1, 1, 1, -1]
+    self._h3motor_direction = [1, -1, -1, 1]
     self._observed_motor_torques = np.zeros(self.num_motors)
     self._applied_motor_torques = np.zeros(self.num_motors)
     self._max_force = 15
@@ -292,7 +291,55 @@ class mdoger7(object):
     #     controlMode=self._pybullet_client.VELOCITY_CONTROL,
     #     targetVelocity=0,
     #     force=low_friction_force)
-    
+  
+
+  def CheckJointContact(self):
+    """检查指定的连杆是否与地面接触。
+
+    Returns:
+      dict: 一个字典，键为连杆名，值为布尔值，表示是否与地面接触。
+      """
+    link_names = [
+      "lf1_joint", "lf2_joint", "lf3_joint",
+      "rf1_joint", "rf2_joint", "rf3_joint",
+      "lb1_joint", "lb2_joint", "lb3_joint",
+      "rb1_joint", "rb2_joint", "rb3_joint"
+    ]
+
+    # 获取所有与地面的接触点
+    # contact_points = self._pybullet_client.getContactPoints(bodyA=self.ground_id, bodyB=self.quadruped)
+
+    # 初始化接触检测结果
+    # contact_detected = {name: False for name in link_names}
+    # collision_count = 0
+    # 检查接触
+    # for contact in contact_points:
+    #     link_id = contact[3]  # 接触的连杆 ID
+    #     for name in link_names:
+    #         if self._joint_name_to_id[name] == link_id:
+    #           contact_detected[name] = True
+    #           collision_count += 1
+    # print('**************')
+    # print('collision_count:', collision_count)
+    # return collision_count
+
+    # 初始化接触检测结果
+    collision_count = False
+    # contact_detected = {name: False for name in link_names}
+    # 转换为连杆 ID
+    motor_joint_ids = [self._joint_name_to_id[name] for name in link_names]
+    # 获取所有接触点
+    contact_points = self._pybullet_client.getContactPoints(bodyA=self.ground_id, bodyB=self.quadruped)
+    # 检查接触
+    for contact in contact_points:
+      link_id = contact[4]  # 接触的连杆 ID
+      if link_id in motor_joint_ids:
+        collision_count = True
+        # joint_name = link_names[motor_joint_ids.index(link_id)]
+        # contact_detected[joint_name] = True
+        # print('collision_count:', collision_count)
+    return collision_count
+
   # def CheckJointContact(self):
   #   """
   #   检查特定关节是否与地面接触。
@@ -305,7 +352,7 @@ class mdoger7(object):
   #   """
   #   contact_detected = {}
   #   # 关节名称
-  #   joints_to_check = ["lf3_joint", "rf3_joint", "lb3_joint", "rb3_joint"]
+  #   joints_to_check = ["_foot_"]
 
   #   # 获取子链ID
   #   link_ids_to_check = [self._joint_name_to_id[joint] for joint in joints_to_check]
@@ -561,31 +608,41 @@ class mdoger7(object):
       ]
       motor_torques = np.multiply(motor_torques, self._motor_direction)
     return motor_torques
-
+  
   def ConvertFromLegModel(self, actions):
-    """Convert the actions that use leg model to the real motor actions.
-
-    Args:
-      actions: The theta, phi of the leg model.
-    Returns:
-      The eight desired motor angles that can be used in ApplyActions().
-    """
-
     motor_angle = copy.deepcopy(actions)
-    scale_for_singularity = 1
-    offset_for_singularity = 1.5
-    half_num_motors = int(self.num_motors / 2)
-    quater_pi = math.pi / 4
-    for i in range(self.num_motors):
-      action_idx = i // 2
-      forward_backward_component = (
-          -scale_for_singularity * quater_pi *
-          (actions[action_idx + half_num_motors] + offset_for_singularity))
-      extension_component = (-1)**i * quater_pi * actions[action_idx]
-      if i >= half_num_motors:
-        extension_component = -extension_component
-      motor_angle[i] = (math.pi + forward_backward_component + extension_component)
+    for i in range(len(actions)):
+        motor_angle[i] = math.fmod(actions[i], math.pi)
+        if motor_angle[i] >= math.pi / 2:
+            motor_angle[i] -= math.pi
+        elif motor_angle[i] < -math.pi:
+            motor_angle[i] += math.pi
     return motor_angle
+
+  # def ConvertFromLegModel(self, actions):
+  #   """Convert the actions that use leg model to the real motor actions.
+
+  #   Args:
+  #     actions: The theta, phi of the leg model.
+  #   Returns:
+  #     The eight desired motor angles that can be used in ApplyActions().
+  #   """
+
+  #   motor_angle = copy.deepcopy(actions)
+  #   scale_for_singularity = 1.5
+  #   offset_for_singularity = 1.5
+  #   half_num_motors = int(self.num_motors / 2)
+  #   quater_pi =1 * math.pi / 4
+  #   for i in range(self.num_motors):
+  #     action_idx = i // 2
+  #     forward_backward_component = (
+  #         -scale_for_singularity * quater_pi *
+  #         (actions[action_idx + half_num_motors] + offset_for_singularity))
+  #     extension_component = (-1)**i * quater_pi * actions[action_idx]
+  #     if i >= half_num_motors:
+  #       extension_component = -extension_component
+  #     motor_angle[i] = (3*math.pi  / 4 + forward_backward_component + extension_component)
+  #   return motor_angle
 
   def GetBaseMassFromURDF(self):
     """Get the mass of the base from the URDF file."""
