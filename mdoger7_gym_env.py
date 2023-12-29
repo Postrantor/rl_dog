@@ -1,5 +1,4 @@
 """This file implements the gym environment of mdoger7.
-
 """
 
 import os, inspect
@@ -27,8 +26,8 @@ MOTOR_ANGLE_OBSERVATION_INDEX = 0
 MOTOR_VELOCITY_OBSERVATION_INDEX = MOTOR_ANGLE_OBSERVATION_INDEX + NUM_MOTORS
 MOTOR_TORQUE_OBSERVATION_INDEX = MOTOR_VELOCITY_OBSERVATION_INDEX + NUM_MOTORS
 BASE_ORIENTATION_OBSERVATION_INDEX = MOTOR_TORQUE_OBSERVATION_INDEX + NUM_MOTORS
-ACTION_EPS = 0.01
-OBSERVATION_EPS = 0.01
+ACTION_EPS = 0.02
+OBSERVATION_EPS = 0.02
 RENDER_HEIGHT = 720
 RENDER_WIDTH = 960
 
@@ -49,10 +48,10 @@ class mdoger7BulletEnv(gym.Env):
       self,
       urdf_root=pybullet_data.getDataPath(),
       action_repeat=1,
-      distance_weight=1.0,
-      energy_weight=0.005,
-      shake_weight=0.0,
-      drift_weight=0.0,
+      distance_weight=10.0,
+      energy_weight=0.5,
+      shake_weight=5.0,
+      drift_weight=5.0,
       distance_limit=float("inf"),
       observation_noise_stdev=0.0,
       self_collision_enabled=True,
@@ -61,13 +60,13 @@ class mdoger7BulletEnv(gym.Env):
       pd_control_enabled=False,  #not needed to be true if accurate motor model is enabled (has its own better PD)
       leg_model_enabled=True,
       accurate_motor_model_enabled=True,
-      motor_kp=1.0,
-      motor_kd=0.02,
+      motor_kp=2.0,
+      motor_kd=0.03,
       torque_control_enabled=False,
-      motor_overheat_protection=True,
+      motor_overheat_protection=False,
       hard_reset=True,
       on_rack=False,
-      render=False,
+      render=True,
       kd_for_pd_controllers=0.3,
       env_randomizer=mdoger7_env_randomizer.mdoger7EnvRandomizer()):
     """Initialize the mdoger7 gym environment.
@@ -181,7 +180,7 @@ class mdoger7BulletEnv(gym.Env):
       acc_motor = self._accurate_motor_model_enabled
       motor_protect = self._motor_overheat_protection
       self.mdoger7 = (mdoger7.mdoger7(pybullet_client=self._pybullet_client,
-                                         urdf_root=self._urdf_root,
+                                        #  urdf_root=self._urdf_root,
                                          time_step=self._time_step,
                                          self_collision_enabled=self._self_collision_enabled,
                                          motor_velocity_limit=self._motor_velocity_limit,
@@ -250,6 +249,7 @@ class mdoger7BulletEnv(gym.Env):
         time.sleep(time_to_sleep)
       base_pos = self.mdoger7.GetBasePosition()
       camInfo = self._pybullet_client.getDebugVisualizerCamera()
+      # print("camInfo:", camInfo)
       curTargetPos = camInfo[11]
       distance = camInfo[10]
       yaw = camInfo[8]
@@ -268,6 +268,8 @@ class mdoger7BulletEnv(gym.Env):
     self._env_step_counter += 1
     reward = self._reward()
     done = self._termination()
+    # print('***********')
+    # print('reward:', reward)
     return np.array(self._noisy_observation()), reward, done, {}
 
   def render(self, mode="rgb_array", close=False):
@@ -332,6 +334,8 @@ class mdoger7BulletEnv(gym.Env):
       A numpy array of mdoger7's orientation.
     """
     return np.array(self._observation[BASE_ORIENTATION_OBSERVATION_INDEX:])
+  
+  
 
   def is_fallen(self):
     """Decide whether the mdoger7 has fallen.
@@ -345,11 +349,19 @@ class mdoger7BulletEnv(gym.Env):
     """
     orientation = self.mdoger7.GetBaseOrientation()
     rot_mat = self._pybullet_client.getMatrixFromQuaternion(orientation)
-    local_up_x =  rot_mat[0:3]
-    local_up_y =  rot_mat[3:6]
-    local_up_z = rot_mat[6:]
+    # print("rot_mat:", rot_mat)
+    # print("Type of rot_mat:", type(rot_mat))
+    # local_up_x =  rot_mat[0:3]
+    # local_up_y =  rot_mat[3:6]
+    local_up = rot_mat[6:]
+    roll = math.atan2(rot_mat[7], rot_mat[8])
+    pitch = math.asin(-rot_mat[6])
+    # yaw = math.atan2(rot_mat[3], rot_mat[0])
     pos = self.mdoger7.GetBasePosition()
-    return (np.dot(np.asarray([1, 0, 0]), np.asarray(local_up_x)) < 0.985 or np.dot(np.asarray([0, 1, 0]), np.asarray(local_up_y)) < 0.85 or np.dot(np.asarray([0, 0, 1]), np.asarray(local_up_z)) < 0.85 or pos[2] < 0.23)
+    return np.dot(np.asarray([0, 0, 1]), np.asarray(local_up)) < 0.85 or pos[2] < 0.2 or abs(roll)>0.1 or abs(pitch) > 0.2 or abs(pitch) > 0.1
+
+    # return (abs(roll) > 0.174 or abs(pitch) > 0.174 or abs(yaw) > 0.174 or pos[2] < 0.25)
+    # return (np.dot(np.asarray([1, 0, 0]), np.asarray(local_up_x)) > 0.985 or np.dot(np.asarray([0, 1, 0]), np.asarray(local_up_y)) > 0.9397 or np.dot(np.asarray([0, 0, 1]), np.asarray(local_up_z)) > 0.9397 or pos[2] < 0.3)
 
   def _termination(self):
     position = self.mdoger7.GetBasePosition()
@@ -357,18 +369,53 @@ class mdoger7BulletEnv(gym.Env):
     return self.is_fallen() or distance > self._distance_limit
 
   def _reward(self):
+    orientation = self.mdoger7.GetBaseOrientation()
+    rot_mat = self._pybullet_client.getMatrixFromQuaternion(orientation)
+    # print("rot_mat:", rot_mat)
+    # print("Type of rot_mat:", type(rot_mat))
+    local_up_x =  rot_mat[0:3]
+    local_up_y =  rot_mat[3:6]
+    local_up_z = rot_mat[6:]
+    roll = math.atan2(rot_mat[7], rot_mat[8])
+    # theta = - (roll **2)
     current_base_position = self.mdoger7.GetBasePosition()
     forward_reward = current_base_position[0] - self._last_base_position[0]
-    drift_reward = -abs(current_base_position[1] - self._last_base_position[1])
-    shake_reward = -abs(current_base_position[2] - self._last_base_position[2])
+    drift_reward = -abs(current_base_position[1])
+    height_reward = -(current_base_position[2]-0.3)**2
+    xy_velocity, yaw_rate =  self.mdoger7.GetBaseVelocity()
+    target_xy_velocity = [5, 5]  # Define these values as per your task requirements
+
+    # Calculate the velocity error (Euclidean distance between current velocity and target velocity)
+    velocity_error = ((xy_velocity[0] - target_xy_velocity[0]) ** 2 + 
+                      (xy_velocity[1] - target_xy_velocity[1]) ** 2) ** 0.5
+    yaw_velocity_error = (yaw_rate - 3) ** 2 
+
+    # Design the XY velocity reward component based on the error
+    some_scale_factor = 0.1  # This is a hyperparameter that you can tune
+    xy_velocity_reward = math.exp(-velocity_error / some_scale_factor)
+    yaw_rate_reward = math.exp(-yaw_velocity_error / 0.1)
+    # adjusted_velocity = np.abs((xy_velocity - 5) / 20)
+    # adjusted_yaw = np.abs((yaw_rate - 3) / 10)
+    # # Calculate the exponential of the absolute values
+    # exp_abs_adjusted_velocity = 10*np.exp(adjusted_velocity)
+    # exp_abs_adjusted_yaw = 10*np.exp(adjusted_yaw)
+    # drift_reward = -abs(current_base_position[1] - self._last_base_position[1])
+    # shake_reward = -abs(current_base_position[2] - self._last_base_position[2])
+    # shake_reward = -(20*(current_base_position[2] - 0.35)**2)
+    rot_matrix = pybullet.getMatrixFromQuaternion(orientation)
+    local_up_vec = rot_matrix[6:]
+    shake_reward = -abs(np.dot(np.asarray([1, 1, 0]), np.asarray(local_up_vec)))
     self._last_base_position = current_base_position
+
     energy_reward = np.abs(
         np.dot(self.mdoger7.GetMotorTorques(),
                self.mdoger7.GetMotorVelocities())) * self._time_step
     reward = (self._distance_weight * forward_reward - self._energy_weight * energy_reward +
-              self._drift_weight * drift_reward + self._shake_weight * shake_reward)
-    self._objectives.append([forward_reward, energy_reward, drift_reward, shake_reward])
+              self._drift_weight * drift_reward + self._shake_weight * shake_reward +10*xy_velocity_reward + 10*yaw_rate_reward + 50*height_reward )    #+ self.mdoger7.CheckJointContact()
+    self._objectives.append([forward_reward, energy_reward, drift_reward, shake_reward,xy_velocity_reward, yaw_rate_reward, height_reward])
+    # print('reward:', reward)
     return reward
+    
 
   def get_objectives(self):
     return self._objectives

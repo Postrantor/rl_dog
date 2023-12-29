@@ -6,22 +6,19 @@
   name="mdoger7">
   <link
     name="base_link">
-    <contact>
-          <lateral_friction value = "1"/>
-    </contact>
     <inertial>
       <origin
-        xyz="0.0001010646354054 -1.44903716982059E-05 0.0496563682052012"
+        xyz="0.00010106 -0.00001449 0.04965637"
         rpy="0 0 0" />
       <mass
-        value="3.08231799893906" />
+        value="3.08231817" />
       <inertia
-        ixx="0.00926650722814916"
-        ixy="-3.62169040276762E-07"
-        ixz="1.968110159689E-11"
-        iyy="0.00876227124364807"
-        iyz="-2.21509418983156E-06"
-        izz="0.014243547976584" />
+        ixx="0.02256965"
+        ixy="0.00000582"
+        ixz="0.00000409"
+        iyy="0.06340830"
+        iyz="0.00000161"
+        izz="0.07738183" />
     </inertial>
     <visual>
       <origin
@@ -49,22 +46,19 @@
   </link>
   <link
     name="lf1">
-   <contact>
-          <lateral_friction value = "1"/>
-   </contact>
     <inertial>
       <origin
-        xyz="-0.0151637299755341 1.75014758606318E-05 -0.064140604721273"
+        xyz="-0.01516373 -0.00001750 0.06414061"
         rpy="0 0 0" />
       <mass
-        value="0.278302034656967" />
+        value="0.27830200" />
       <inertia
-        ixx="0.00032196729273197"
-        ixy="-1.47281760990052E-07"
-        ixz="7.3702765706139E-13"
-        iyy="0.000194181718975337"
-        iyz="1.22324917731508E-12"
-        izz="0.0001674886453552" />
+        ixx="0.00036169"
+        ixy="-0.00000013"
+        ixz="-0.00002051"
+        iyy="0.00025180"
+        iyz="-0.00000002"
+        izz="0.00018538" />
     </inertial>
     <visual>
       <origin
@@ -77,7 +71,7 @@
       <material
         name="">
         <color
-          rgba="1 1 1 1" /> 
+          rgba="1 1 1 1" />
       </material>
     </visual>
     <collision>
@@ -92,40 +86,37 @@
   </link>
   <joint
     name="lf1_joint"
-    type="continuous">
+    type="revolute">
     <origin
       xyz="0.2043 0.08 0.05825"
-      rpy="-1.5708 0.0011541 1.5708" />
+      rpy="1.5708 0.0011541 1.5708" />
     <parent
       link="base_link" />
     <child
       link="lf1" />
     <axis
-      xyz="0 0 1" />
+      xyz="0 0 -1" />
     <limit
-      lower="-3.14"
-      upper="3.14"
+      lower="-0.174"
+      upper="0.174"
       effort="100"
-      velocity="100" />
+      velocity="1" />
   </joint>
   <link
     name="lf2">
- <contact>
-          <lateral_friction value = "1"/>
-    </contact>
     <inertial>
       <origin
-        xyz="-0.0209420236370367 -0.0208032252416819 -0.045894208725074"
+        xyz="0.02094234 -0.02074639 0.04952985"
         rpy="0 0 0" />
       <mass
-        value="0.444479146815381" />
+        value="0.44448058" />
       <inertia
-        ixx="0.00026829245198987"
-        ixy="-4.77036845770594E-05"
-        ixz="-2.13716322869677E-06"
-        iyy="0.000270682074177794"
-        iyz="-2.12152106708105E-06"
-        izz="0.000472626321065816" />
+        ixx="0.00132496"
+        ixy="-0.00092284"
+        ixz="0.00024164"
+        iyy="0.00133160"
+        iyz="-0.00024008"
+        izz="0.00222455" />
     </inertial>
     <visual>
       <origin
@@ -153,40 +144,37 @@
   </link>
   <joint
     name="lf2_joint"
-    type="continuous">
+    type="revolute">
     <origin
-      xyz="0.0031 0 -0.069"
-      rpy="3.1404 1.5708 0" />
+      xyz="0.0031 0.00000358 0.069"
+      rpy="0 1.5708 0" />
     <parent
       link="lf1" />
     <child
       link="lf2" />
     <axis
-      xyz="0 0 1" />
+      xyz="0 -0.0011541 -1" />
     <limit
-      lower="-3.14"
-      upper="3.14"
+      lower="-0.523"
+      upper="0.523"
       effort="100"
-      velocity="100" />
+      velocity="1" />
   </joint>
   <link
     name="lf3">
- <contact>
-          <lateral_friction value = "1"/>
-    </contact>
     <inertial>
       <origin
-        xyz="0.0951881658908742 0.0951821207261651 9.60842788749749E-06"
+        xyz="-0.05292001 -0.05290891 0.00005762"
         rpy="0 0 0" />
       <mass
-        value="0.0675377262682892" />
+        value="0.03645433" />
       <inertia
-        ixx="8.81321775814089E-05"
-        ixy="-7.86245523358521E-05"
-        ixz="5.90456583906145E-09"
-        iyy="8.84353154783548E-05"
-        iyz="7.00680263637514E-09"
-        izz="0.000169813891149621" />
+        ixx="0.00008241"
+        ixy="0.00007839"
+        ixz="-0.00000009"
+        iyy="0.00008271"
+        iyz="-0.00000009"
+        izz="0.00016406" />
     </inertial>
     <visual>
       <origin
@@ -214,43 +202,90 @@
   </link>
   <joint
     name="lf3_joint"
-    type="continuous">
+    type="revolute">
     <origin
-      xyz="-0.14849 -0.14849 -0.0993"
-      rpy="3.1416 0 0" />
+      xyz="0.14849 -0.14838 0.099471"
+      rpy="0 0 0" />
     <parent
       link="lf2" />
     <child
       link="lf3" />
     <axis
-      xyz="0 0 -1" />
+      xyz="0 0.0011541 1" />
     <limit
-      lower="-3.14"
-      upper="3.14"
+      lower="-0.523"
+      upper="0.523"
       effort="100"
-      velocity="100" />
+      velocity="1" />
   </joint>
-  
-  
-  
   <link
-    name="rf1">
- <contact>
-          <lateral_friction value = "1"/>
-    </contact>
+    name="lf_foot">
     <inertial>
       <origin
-        xyz="0.015163729740363 -1.75006511684006E-05 -0.0641406047212723"
+        xyz="0 0.00002498 0.00028212"
         rpy="0 0 0" />
       <mass
-        value="0.278302034656966" />
+        value="0.03108367" />
       <inertia
-        ixx="0.000321967292731969"
-        ixy="-1.47281760991181E-07"
-        ixz="7.37027613515436E-13"
-        iyy="0.000194181718975336"
-        iyz="1.22324933440187E-12"
-        izz="0.0001674886453552" />
+        ixx="0.00000596"
+        ixy="0"
+        ixz="0"
+        iyy="0.00000576"
+        iyz="0"
+        izz="0.00000548" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://mdoger7/meshes/lf_foot.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://mdoger7/meshes/lf_foot.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="lf_foot_joint"
+    type="fixed">
+    <origin
+      xyz="-0.14426 -0.14581 0.00072578"
+      rpy="1.5716 0.0008161 2.3562" />
+    <parent
+      link="lf3" />
+    <child
+      link="lf_foot" />
+    <axis
+      xyz="0 0 0" />
+  </joint>
+  <link
+    name="rf1">
+    <inertial>
+      <origin
+        xyz="-0.01516373 0.00001750 -0.06414061"
+        rpy="0 0 0" />
+      <mass
+        value="0.27830200" />
+      <inertia
+        ixx="0.00036169"
+        ixy="0.0000013"
+        ixz="0.00002051"
+        iyy="0.00025180"
+        iyz="-0.00000002"
+        izz="0.00018538" />
     </inertial>
     <visual>
       <origin
@@ -278,10 +313,10 @@
   </link>
   <joint
     name="rf1_joint"
-    type="continuous">
+    type="revolute">
     <origin
       xyz="0.2043 -0.08 0.05825"
-      rpy="-1.5708 0.0011541 1.5708" />
+      rpy="1.5708 -0.0011541 -1.5708" />
     <parent
       link="base_link" />
     <child
@@ -289,29 +324,26 @@
     <axis
       xyz="0 0 1" />
     <limit
-      lower="-3.14"
-      upper="3.14"
+      lower="-0.174"
+      upper="0.174"
       effort="100"
-      velocity="100" />
+      velocity="1" />
   </joint>
   <link
     name="rf2">
- <contact>
-          <lateral_friction value = "1"/>
-    </contact>
     <inertial>
       <origin
-        xyz="-0.0209407848214778 0.0208018615715731 -0.0495059917942707"
+        xyz="-0.02094116 -0.02085936 0.04948201"
         rpy="0 0 0" />
       <mass
-        value="0.444477705439595" />
+        value="0.44447934" />
       <inertia
-        ixx="0.000268250988703257"
-        ixy="4.76650858942124E-05"
-        ixz="-2.13198040079686E-06"
-        iyy="0.000270642477084771"
-        iyz="2.11639554561677E-06"
-        izz="0.000472544588515103" />
+        ixx="0.00132484"
+        ixy="0.00092328"
+        ixz="-0.00023951"
+        iyy="0.00133038"
+        iyz="-0.00023802"
+        izz="0.00222543" />
     </inertial>
     <visual>
       <origin
@@ -339,40 +371,37 @@
   </link>
   <joint
     name="rf2_joint"
-    type="continuous">
+    type="revolute">
     <origin
-      xyz="-0.0031 0 -0.069"
-      rpy="0.0011541 1.5708 0" />
+      xyz="0.0031 -0.00000358 -0.069"
+      rpy="0 1.5708 0" />
     <parent
       link="rf1" />
     <child
       link="rf2" />
     <axis
-      xyz="0 0 1" />
+      xyz="0 0.0011541 -1" />
     <limit
-      lower="-3.14"
-      upper="3.14"
+      lower="-0.523"
+      upper="0.523"
       effort="100"
-      velocity="100" />
+      velocity="1" />
   </joint>
   <link
     name="rf3">
- <contact>
-          <lateral_friction value = "1"/>
-    </contact>
     <inertial>
       <origin
-        xyz="0.0951819937807815 -0.0951882401253786 -0.000100252089426767"
+        xyz="0.05290887 -0.05292004 -0.00006452"
         rpy="0 0 0" />
       <mass
-        value="0.0675377265651493" />
+        value="0.03645433" />
       <inertia
-        ixx="8.84355252436357E-05"
-        ixy="7.86244916307677E-05"
-        ixz="9.77505001615339E-08"
-        iyy="8.81320906399492E-05"
-        iyz="-1.0017676981397E-07"
-        izz="0.000169813769085874" />
+        ixx="0.00008272"
+        ixy="-0.00007839"
+        ixz="-0.00000009"
+        iyy="0.00008241"
+        iyz="0.00000009"
+        izz="0.00016406" />
     </inertial>
     <visual>
       <origin
@@ -400,44 +429,90 @@
   </link>
   <joint
     name="rf3_joint"
-    type="continuous">
+    type="revolute">
     <origin
-      xyz="-0.14849 0.14849 -0.0993"
-      rpy="3.1404 0 0" />
+      xyz="-0.14849 -0.14861 0.099129"
+      rpy="0 0 0" />
     <parent
       link="rf2" />
     <child
       link="rf3" />
     <axis
-      xyz="0 0.0011541 -1" />
+      xyz="0 -0.0011541 1" />
     <limit
-      lower="-3.14"
-      upper="3.14"
+      lower="-0.523"
+      upper="0.523"
       effort="100"
-      velocity="100" />
+      velocity="1" />
   </joint>
-
-  
-  
-
   <link
-    name="lb1">
- <contact>
-          <lateral_friction value = "1"/>
-    </contact>
+    name="rf_foot">
     <inertial>
       <origin
-        xyz="-0.0151637299765069 -1.75006514495438E-05 -0.064140604721273"
+        xyz="0 -0.00002497 0.00028212"
         rpy="0 0 0" />
       <mass
-        value="0.278302034656966" />
+        value="0.03108367" />
       <inertia
-        ixx="0.000321967291804758"
-        ixy="1.4768344959992E-07"
-        ixz="7.34203157755173E-13"
-        iyy="0.000194181719902547"
-        iyz="1.22494735617097E-12"
-        izz="0.0001674886453552" />
+        ixx="0.00000596"
+        ixy="0"
+        ixz="0"
+        iyy="0.00000576"
+        iyz="0"
+        izz="0.00000548" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://mdoger7/meshes/rf_foot.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://mdoger7/meshes/rf_foot.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="rf_foot_joint"
+    type="fixed">
+    <origin
+      xyz="0.14496 -0.14496 -0.0001673"
+      rpy="-1.57 -0.0008161 0.7854" />
+    <parent
+      link="rf3" />
+    <child
+      link="rf_foot" />
+    <axis
+      xyz="0 0 0" />
+  </joint>
+  <link
+    name="lb1">
+    <inertial>
+      <origin
+        xyz="-0.01516373 -0.00001750 -0.06414061"
+        rpy="0 0 0" />
+      <mass
+        value="0.27830200" />
+      <inertia
+        ixx="0.00036169"
+        ixy="-0.00000013"
+        ixz="0.00002051"
+        iyy="0.00025180"
+        iyz="0.00000002"
+        izz="0.00018538" />
     </inertial>
     <visual>
       <origin
@@ -465,7 +540,7 @@
   </link>
   <joint
     name="lb1_joint"
-    type="continuous">
+    type="revolute">
     <origin
       xyz="-0.2043 0.08 0.05825"
       rpy="1.5708 0.0011541 1.5708" />
@@ -476,29 +551,26 @@
     <axis
       xyz="0 0 1" />
     <limit
-      lower="-3.14"
-      upper="3.14"
+      lower="-0.174"
+      upper="0.174"
       effort="100"
-      velocity="100" />
+      velocity="1" />
   </joint>
   <link
     name="lb2">
- <contact>
-          <lateral_friction value = "1"/>
-    </contact>
     <inertial>
       <origin
-        xyz="0.0208048461352753 0.0208557628465853 -0.0494922931941535"
+        xyz="0.02084748 -0.02084124 0.04952996"
         rpy="0 0 0" />
       <mass
-        value="0.444331812401217" />
+        value="0.44448058" />
       <inertia
-        ixx="0.00026974606749508"
-        ixy="-4.77036914407743E-05"
-        ixz="2.13716761698061E-06"
-        iyy="0.000269216418831657"
-        iyz="2.1215254628276E-06"
-        izz="0.000472614490483167" />
+        ixx="0.00132934"
+        ixy="-0.00092322"
+        ixz="0.00024057"
+        iyy="0.00132645"
+        iyz="-0.00024115"
+        izz="0.00222378" />
     </inertial>
     <visual>
       <origin
@@ -526,40 +598,37 @@
   </link>
   <joint
     name="lb2_joint"
-    type="continuous">
+    type="revolute">
     <origin
-      xyz="0.0031 0 -0.069"
-      rpy="3.1404 1.5708 0" />
+      xyz="0.0031 0.00000358 -0.069"
+      rpy="0 1.5708 0" />
     <parent
       link="lb1" />
     <child
       link="lb2" />
     <axis
-      xyz="0 0 1" />
+      xyz="0 -0.0011541 -1" />
     <limit
-      lower="-3.14"
-      upper="3.14"
+      lower="-0.523"
+      upper="0.523"
       effort="100"
-      velocity="100" />
+      velocity="1" />
   </joint>
   <link
     name="lb3">
- <contact>
-          <lateral_friction value = "1"/>
-    </contact>
     <inertial>
       <origin
-        xyz="0.0951881845717944 0.095182101818491 -1.33146198698642E-05"
+        xyz="-0.05292005 -0.05290888 0.00005762"
         rpy="0 0 0" />
       <mass
-        value="0.0675377264543488" />
+        value="0.03645433" />
       <inertia
-        ixx="8.81320554193421E-05"
-        ixy="-7.86245522493566E-05"
-        ixz="-4.72302543602649E-09"
-        iyy="8.8435437928186E-05"
-        iyz="-3.62074413021887E-09"
-        izz="0.000169813891423586" />
+        ixx="0.00008241"
+        ixy="0.00007839"
+        ixz="-0.00000009"
+        iyy="0.00008272"
+        iyz="-0.00000009"
+        izz="0.00016406" />
     </inertial>
     <visual>
       <origin
@@ -587,41 +656,90 @@
   </link>
   <joint
     name="lb3_joint"
-    type="continuous">
+    type="revolute">
     <origin
-      xyz="0.14849 0.14849 -0.0993"
-      rpy="3.1416 0 -3.1416" />
+      xyz="0.14849 -0.14838 0.099471"
+      rpy="0 0 0" />
     <parent
       link="lb2" />
     <child
       link="lb3" />
     <axis
-      xyz="0 0 -1" />
+      xyz="0 0.0011541 1" />
     <limit
-      lower="-3.14"
-      upper="3.14"
+      lower="-0.523"
+      upper="0.523"
       effort="100"
-      velocity="100" />
+      velocity="1" />
   </joint>
-  
   <link
-    name="rb1">
- <contact>
-          <lateral_friction value = "1"/>
- </contact>
+    name="lb_foot">
     <inertial>
       <origin
-        xyz="0.0151637398392296 4.12067463484433E-10 -0.0641406047212974"
+        xyz="0 -0.00002497 0.00028212"
         rpy="0 0 0" />
       <mass
-        value="0.278302034656966" />
+        value="0.03108367" />
       <inertia
-        ixx="0.000321967462483901"
-        ixy="2.00844838901847E-10"
-        ixz="7.3562111595188E-13"
-        iyy="0.000194181549223405"
-        iyz="1.22409922902118E-12"
-        izz="0.0001674886453552" />
+        ixx="0.00000596"
+        ixy="0"
+        ixz="0"
+        iyy="0.00000576"
+        iyz="0"
+        izz="0.00000548" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://mdoger7/meshes/lb_foot.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://mdoger7/meshes/lb_foot.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="lb_foot_joint"
+    type="fixed">
+    <origin
+      xyz="-0.14496 -0.14496 0.0001673"
+      rpy="1.5716 0.0008161 2.3562" />
+    <parent
+      link="lb3" />
+    <child
+      link="lb_foot" />
+    <axis
+      xyz="0 0 0" />
+  </joint>
+  <link
+    name="rb1">
+    <inertial>
+      <origin
+        xyz="-0.01516373 0.00001750 0.06414061"
+        rpy="0 0 0" />
+      <mass
+        value="0.27830200" />
+      <inertia
+        ixx="0.00036169"
+        ixy="0.00000013"
+        ixz="-0.00002051"
+        iyy="0.00025180"
+        iyz="0.00000002"
+        izz="0.00018538" />
     </inertial>
     <visual>
       <origin
@@ -649,40 +767,37 @@
   </link>
   <joint
     name="rb1_joint"
-    type="continuous">
+    type="revolute">
     <origin
       xyz="-0.2043 -0.08 0.05825"
-      rpy="1.5708 0 1.5708" />
+      rpy="1.5708 -0.0011541 -1.5708" />
     <parent
       link="base_link" />
     <child
       link="rb1" />
     <axis
-      xyz="0 0 1" />
+      xyz="0 0 -1" />
     <limit
-      lower="-3.14"
-      upper="3.14"
+      lower="-0.174"
+      upper="0.174"
       effort="100"
-      velocity="100" />
+      velocity="1" />
   </joint>
   <link
     name="rb2">
- <contact>
-          <lateral_friction value = "1"/>
- </contact>
     <inertial>
       <origin
-        xyz="0.0207464746325403 -0.0207794945944038 -0.0494755469353061"
+        xyz="-0.02085520 -0.02094531 0.04948143"
         rpy="0 0 0" />
       <mass
-        value="0.444100714371199" />
+        value="0.44447934" />
       <inertia
-        ixx="0.000268961409564988"
-        ixy="4.83949011486247E-05"
-        ixz="2.13197669078382E-06"
-        iyy="0.000269893257620922"
-        iyz="-2.11639158214857E-06"
-        izz="0.000472506041221308" />
+        ixx="0.00132817"
+        ixy="0.00092440"
+        ixz="-0.00023851"
+        iyy="0.00132626"
+        iyz="-0.00023895"
+        izz="0.00222465" />
     </inertial>
     <visual>
       <origin
@@ -710,40 +825,37 @@
   </link>
   <joint
     name="rb2_joint"
-    type="continuous">
+    type="revolute">
     <origin
-      xyz="-0.0031 0 -0.069"
+      xyz="0.0031 -0.00000358 0.069"
       rpy="0 1.5708 0" />
     <parent
       link="rb1" />
     <child
       link="rb2" />
     <axis
-      xyz="0 0 1" />
+      xyz="0 0.0011541 -1" />
     <limit
-      lower="-3.14"
-      upper="3.14"
+      lower="-0.523"
+      upper="0.523"
       effort="100"
-      velocity="100" />
+      velocity="1" />
   </joint>
   <link
     name="rb3">
- <contact>
-          <lateral_friction value = "1"/>
- </contact>
     <inertial>
       <origin
-        xyz="0.0951881213406118 -0.0951821173153637 -9.65388383854515E-05"
+        xyz="0.05292001 -0.05290891 -0.00005762"
         rpy="0 0 0" />
       <mass
-        value="0.0675377263163792" />
+        value="0.03645433" />
       <inertia
-        ixx="8.81321600885773E-05"
-        ixy="7.86244945210139E-05"
-        ixz="9.54666743433398E-08"
-        iyy="8.84354497422735E-05"
-        iyz="-9.75428378587097E-08"
-        izz="0.000169813774393313" />
+        ixx="0.00008241"
+        ixy="-0.00007893"
+        ixz="-0.00000009"
+        iyy="0.00008271"
+        iyz="0.00000009"
+        izz="0.00016406" />
     </inertial>
     <visual>
       <origin
@@ -771,22 +883,73 @@
   </link>
   <joint
     name="rb3_joint"
-    type="continuous">
+    type="revolute">
     <origin
-      xyz="0.14849 -0.14849 -0.0993"
-      rpy="3.1404 0 3.1416" />
+      xyz="-0.14849 -0.14861 0.099129"
+      rpy="0 0 0" />
     <parent
       link="rb2" />
     <child
       link="rb3" />
     <axis
-      xyz="0 0.0011541 -1" />
+      xyz="0 -0.0011541 1" />
     <limit
-      lower="-3.14"
-      upper="3.14"
-      effort="0"
-      velocity="0" />
+      lower="-0.523"
+      upper="0.523"
+      effort="100"
+      velocity="1" />
   </joint>
-
- 
+  <link
+    name="rb_foot">
+    <inertial>
+      <origin
+        xyz="0 -0.00002497 0.00028212"
+        rpy="0 0 0" />
+      <mass
+        value="0.03108367" />
+      <inertia
+        ixx="0.00000596"
+        ixy="0"
+        ixz="0"
+        iyy="0.00000576"
+        iyz="0"
+        izz="0.00000548" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://mdoger7/meshes/rb_foot.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://mdoger7/meshes/rb_foot.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="rb_foot_joint"
+    type="fixed">
+    <origin
+      xyz="0.14496 -0.14496 -0.0001673"
+      rpy="-1.57 -0.0008161 0.7854" />
+    <parent
+      link="rb3" />
+    <child
+      link="rb_foot" />
+    <axis
+      xyz="0 0 0" />
+  </joint>
 </robot>

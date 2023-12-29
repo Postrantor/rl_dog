@@ -7,6 +7,8 @@ import random
 import numpy as np
 import pybullet as p
 import os
+import pdb
+
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 class ReplayMemory(object):
@@ -299,7 +301,6 @@ class SACAgent:
 		"""
 		torch.save(self.policy.state_dict(), path)
 
-
 class SAC2Agent:
 	"""
 	Agent for the second generation of the Soft Actor Critic learning algorithm presented in
@@ -378,6 +379,9 @@ class SAC2Agent:
 		next_q1 = self.target_q1(next_state, next_action)
 		next_q2 = self.target_q2(next_state, next_action)
 		value = torch.min(next_q1, next_q2) - self.alpha * next_log_prob
+		# print("***************************************")
+		print(reward.shape)
+		print(value.shape)
 		expected_q = reward + gamma * (1 - done) * value
 
 		q1 = self.q1(state, action)
@@ -469,9 +473,12 @@ def train_loop(env, agent, max_total_steps, max_steps, batch_size, intermediate_
 				action = env.action_space.sample()
 				next_state, reward, done, _ = env.step(action)
 
-			#TODO:done的判断存在问题
-			done = False
+			#FIXME : done的判断存在问题
+			# pdb.set_trace()
+			# done = False
 			# Add state action transition to replay memory
+			# print('action:', action)
+			# print('state:', state)
 			agent.replay_buffer.push(state, action, next_state, reward, done)
 
 			state = next_state
@@ -481,7 +488,6 @@ def train_loop(env, agent, max_total_steps, max_steps, batch_size, intermediate_
 			if update_all:
 				if len(agent.replay_buffer) > batch_size:
 					agent.update(batch_size)
-
 			else:
 				if len(agent.replay_buffer) > batch_size and not steps % 10:
 					agent.update(batch_size)

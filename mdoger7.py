@@ -1,13 +1,13 @@
 """This file implements the functionalities of a minitaur using pybullet.
-
 """
+
 import copy
 import math
 import numpy as np
 import motor
 import os
-
-INIT_POSITION = [0, 0, .2]
+import pybullet_data
+INIT_POSITION = [0, 0, 0.3]
 INIT_ORIENTATION = [0, 0, 0, 1]
 lower_CONSTRAINT_POINT_RIGHT = [0, 0.00, 0.]
 lower_CONSTRAINT_POINT_LEFT = [0, 0.0, 0.]
@@ -37,20 +37,16 @@ DEFAULT_KNEE_ANGLE = 0
 INIT_MOTOR_ANGLES = [
     DEFAULT_ABDUCTION_ANGLE, DEFAULT_HIP_ANGLE, DEFAULT_KNEE_ANGLE
 ] * NUM_LEGS
-
+# INIT_MOTOR_ANGLES = 0*[1, -1, -1, 1, 1, -1, 1, 1, -1, 1, 1, -1]
 
 #LEG_LINK_ID = [2, 3, 5, 6, 8, 9, 11, 12, 15, 16, 18, 19, 21, 22, 24, 25]
 #MOTOR_LINK_ID = [1, 4, 7, 10, 14, 17, 20, 23]
 #FOOT_LINK_ID = [3, 6, 9, 12, 16, 19, 22, 25]
 ##BASE_LINK_ID = -1
 #LEG_LINK_ID = [2, 3, 5, 6, 8, 9, 11, 12, 14, 15, 17, 18, 20, 21, 23, 24, 26, 27, 29, 30, 32, 33, 35, 36]
-MOTOR_LINK_ID = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-FOOT_LINK_ID = [2, 5, 8, 11]
+MOTOR_LINK_ID = [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]
+FOOT_LINK_ID = [3, 7, 11, 115]
 BASE_LINK_ID = -1
-
-
-
-
 
 class mdoger7(object):
   """The mdoger7 class that simulates a quadruped robot from Ghost Robotics.
@@ -65,8 +61,8 @@ class mdoger7(object):
                motor_velocity_limit=np.inf,
                pd_control_enabled=False,
                accurate_motor_model_enabled=False,
-               motor_kp=1.0,
-               motor_kd=0.02,
+               motor_kp=8.0,
+               motor_kd=0.2,
                torque_control_enabled=False,
                motor_overheat_protection=False,
                on_rack=False,
@@ -102,17 +98,18 @@ class mdoger7(object):
     self._self_collision_enabled = self_collision_enabled
     self._motor_velocity_limit = motor_velocity_limit
     self._pd_control_enabled = pd_control_enabled
-    self._motor_direction = [1, 1, -1, 1, 1, -1, 1, 1, -1, 1, 1, -1]
-    self._h1motor_direction = [1, 1, -1, 1]
-    self._h2motor_direction = [1, -1, 1, 1]
-    self._h3motor_direction = [-1, 1, 1, -1]
+    self._motor_direction = [-1, -1, -1, 1, -1, -1, 1, -1, -1, -1, -1, -1]
+    self._h1motor_direction = [-1, -1, -1, 1]
+    self._h2motor_direction = [-1, -1, 1, -1]
+    self._h3motor_direction = [-1, -1, -1, -1]
     self._observed_motor_torques = np.zeros(self.num_motors)
     self._applied_motor_torques = np.zeros(self.num_motors)
-    self._max_force = 10
+    self._max_force = 15
     self._accurate_motor_model_enabled = accurate_motor_model_enabled
     self._torque_control_enabled = torque_control_enabled
     self._motor_overheat_protection = motor_overheat_protection
     self._on_rack = on_rack
+    self.ground_id = self._pybullet_client.loadURDF("%s/plane.urdf" % pybullet_data.getDataPath())
     if self._accurate_motor_model_enabled:
       self._kp = motor_kp
       self._kd = motor_kd
@@ -120,7 +117,7 @@ class mdoger7(object):
                                            kp=self._kp,
                                            kd=self._kd)
     elif self._pd_control_enabled:
-      self._kp = 8
+      self._kp = 1
       self._kd = kd_for_pd_controllers
     else:
       self._kp = 1
@@ -153,29 +150,38 @@ class mdoger7(object):
       reload_urdf: Whether to reload the urdf file. If not, Reset() just place
         the mdoger7 back to its starting position.
     """
+    
     if reload_urdf:
       if self._self_collision_enabled:
         self.quadruped = self._pybullet_client.loadURDF(
-            "%s/model/mdoger7.urdf" % self._urdf_root,
+            "%s/mdoger7.urdf" % self._urdf_root,
             INIT_POSITION,
+            INIT_ORIENTATION,
+            useFixedBase=self._on_rack,
             flags=self._pybullet_client.URDF_USE_SELF_COLLISION)
       else:
         self.quadruped = self._pybullet_client.loadURDF(
-            "%s/model/mdoger7.urdf" % self._urdf_root, INIT_POSITION)
+            "%s/mdoger7.urdf" % self._urdf_root, INIT_POSITION,
+            INIT_ORIENTATION,
+            useFixedBase=self._on_rack)
       self._BuildJointNameToIdDict()
       self._BuildMotorIdList()
       self._RecordMassInfoFromURDF()
-      self.ResetPose(add_constraint=None)
-      if self._on_rack:
-        self._pybullet_client.createConstraint(self.quadruped, -1, -1, -1,
-                                               self._pybullet_client.JOINT_FIXED, [0, 0, 0],
-                                               [0, 0, 0], [0, 0, 1])
+      self.ResetPose()
+    #   if self._on_rack:
+    #     self._pybullet_client.createConstraint(self.quadruped, -1, -1, -1,
+    #                                            self._pybullet_client.JOINT_FIXED, [0, 0, 0],
+    #                                            [0, 0, 0], [0, 0, 1])
+    # else:
+    #   self._pybullet_client.resetBasePositionAndOrientation(self.quadruped, INIT_POSITION,
+    #                                                         INIT_ORIENTATION)
+    #   self._pybullet_client.resetBaseVelocity(self.quadruped, [0, 0, 0], [0, 0, 0])
+      # self.ResetPose(add_constraint=False)
     else:
       self._pybullet_client.resetBasePositionAndOrientation(self.quadruped, INIT_POSITION,
-                                                            INIT_ORIENTATION)
+      INIT_ORIENTATION)
       self._pybullet_client.resetBaseVelocity(self.quadruped, [0, 0, 0], [0, 0, 0])
-      self.ResetPose(add_constraint=None)
-
+      self.ResetPose()
     self._overheat_counter = np.zeros(self.num_motors)
     self._motor_enabled_list = [True] * self.num_motors
 
@@ -240,8 +246,12 @@ class mdoger7(object):
   #                                         targetVelocity=0)
   
 
-  def ResetPose(self, add_constraint = False):
-    del add_constraint
+  def ResetPose(self):
+    # del add_constraint
+    for name, i in zip(MOTOR_NAMES, range(len(MOTOR_NAMES))):
+      angle = INIT_MOTOR_ANGLES[i]
+      self._pybullet_client.resetJointState(
+          self.quadruped, self._joint_name_to_id[name], angle, targetVelocity=0)
     for name in self._joint_name_to_id:
       joint_id = self._joint_name_to_id[name]
       self._pybullet_client.setJointMotorControl2(
@@ -250,10 +260,6 @@ class mdoger7(object):
           controlMode=self._pybullet_client.VELOCITY_CONTROL,
           targetVelocity=0,
           force=0)
-    for name, i in zip(MOTOR_NAMES, range(len(MOTOR_NAMES))):
-      angle = INIT_MOTOR_ANGLES[i]
-      self._pybullet_client.resetJointState(
-          self.quadruped, self._joint_name_to_id[name], angle, targetVelocity=0)
 
     # if add_constraint:
     #   self._pybullet_client.createConstraint(
@@ -286,6 +292,65 @@ class mdoger7(object):
     #     controlMode=self._pybullet_client.VELOCITY_CONTROL,
     #     targetVelocity=0,
     #     force=low_friction_force)
+    
+  # def CheckJointContact(self):
+  #   """
+  #   检查特定关节是否与地面接触。
+
+  #   Args:
+  #     ground_id (int): 地面的ID。
+
+  #   Returns:
+  #     dict: 一个字典，包含关节名称和它们是否与地面接触的信息。
+  #   """
+  #   contact_detected = {}
+  #   # 关节名称
+  #   joints_to_check = ["lf3_joint", "rf3_joint", "lb3_joint", "rb3_joint"]
+
+  #   # 获取子链ID
+  #   link_ids_to_check = [self._joint_name_to_id[joint] for joint in joints_to_check]
+
+  #   # 检测接触
+  #   contact_points = self._pybullet_client.getContactPoints(bodyA=self.quadruped, bodyB=self.ground_id)
+
+
+  #   # 初始化字典
+  #   for joint in joints_to_check:
+  #       contact_detected[joint] = False
+
+  #   joint_contact_count = 0
+  #   # 分析接触点
+  #   for contact in contact_points:
+  #       link_id = contact[3]  # 接触的链接ID
+  #       if link_id in link_ids_to_check:
+  #           joint_name = joints_to_check[link_ids_to_check.index(link_id)]
+  #           contact_detected[joint_name] = True
+  #           joint_contact_count+=1
+  #           collision_penalty = -joint_contact_count * 5
+  #       print("collision_penalty:", collision_penalty)
+  #       return collision_penalty
+  
+  # def CheckJointContact(self, joint_name_suffix="_3_joint"):
+  #       """检查是否有任何名为'joint_name_suffix'的关节接触到了任何东西。
+
+  #       Args:
+  #         joint_name_suffix: 要检查的关节名称后缀。
+
+  #       Returns:
+  #         一个布尔值，如果有任何名为'joint_name_suffix'的关节发生接触，则为True。
+  #       """
+  #       contacts = self._pybullet_client.getContactPoints(bodyA=self.quadruped, bodyB=self.ground_id)
+  #       # print("contacts:", contacts)
+  #       joint_contact_count = 0
+  #       for contact in contacts:
+  #           contact_link_id = contact[3]  # 获取接触的链接ID
+  #           contact_link_info = self._pybullet_client.getJointInfo(self.quadruped, contact_link_id)
+  #           contact_link_name = contact_link_info[1].decode('UTF-8')
+  #           if joint_name_suffix in contact_link_name:
+  #               joint_contact_count += 1
+  #       collision_penalty = -joint_contact_count * 5
+  #       # print("collision_penalty:", collision_penalty)
+  #       return collision_penalty
 
   def GetBasePosition(self):
     """Get the position of mdoger7's base.
@@ -304,6 +369,20 @@ class mdoger7(object):
     """
     _, orientation = (self._pybullet_client.getBasePositionAndOrientation(self.quadruped))
     return orientation
+  
+  def GetBaseVelocity(self):
+    """Get the velocity of mdoger7's base in the XY plane and the yaw rate.
+
+    Returns:
+      A tuple containing:
+      - The XY velocity of mdoger7's base.
+      - The yaw rate (rotational velocity around Z-axis) of mdoger7's base.
+    """
+    linear_velocity, angular_velocity = self._pybullet_client.getBaseVelocity(self.quadruped)
+    xy_velocity = np.array(linear_velocity[:2])  # Take only the X and Y components
+    yaw_rate = angular_velocity[2]  # Z-axis component represents yaw rate
+    return xy_velocity, yaw_rate
+
 
   def GetActionDimension(self):
     """Get the length of the action list.
@@ -320,12 +399,25 @@ class mdoger7(object):
       The upper bound of an observation. See GetObservation() for the details
         of each element of an observation.
     """
+    # upper_bound = np.array([0.0] * self.GetObservationDimension())
+    # upper_bound[0:self.num_motors] = math.pi  # Joint angle.
+    # upper_bound[self.num_motors:2 * self.num_motors] = (motor.MOTOR_SPEED_LIMIT)  # Joint velocity.
+    # upper_bound[2 * self.num_motors:3 * self.num_motors] = (motor.OBSERVED_TORQUE_LIMIT
+    #                                                        )  # Joint torque.
+    # upper_bound[3 * self.num_motors:] = 1.0  # Quaternion of base orientation.
     upper_bound = np.array([0.0] * self.GetObservationDimension())
     upper_bound[0:self.num_motors] = math.pi  # Joint angle.
-    upper_bound[self.num_motors:2 * self.num_motors] = (motor.MOTOR_SPEED_LIMIT)  # Joint velocity.
-    upper_bound[2 * self.num_motors:3 * self.num_motors] = (motor.OBSERVED_TORQUE_LIMIT
-                                                           )  # Joint torque.
-    upper_bound[3 * self.num_motors:] = 1.0  # Quaternion of base orientation.
+    upper_bound[self.num_motors:2 * self.num_motors] = motor.MOTOR_SPEED_LIMIT  # Joint velocity.
+    upper_bound[2 * self.num_motors:3 * self.num_motors] = motor.OBSERVED_TORQUE_LIMIT  # Joint torque.
+    upper_bound[3 * self.num_motors:3 * self.num_motors + 4] = 1.0  # Quaternion of base orientation.
+
+    # Assuming a reasonable upper limit for base XY velocity (e.g., 10 m/s)
+    upper_bound[3 * self.num_motors + 4:3 * self.num_motors + 6] = 10.0  # Upper limit for XY velocity
+
+    # Assuming a reasonable upper limit for yaw rate (e.g., 5 rad/s)
+    upper_bound[3 * self.num_motors + 6] = 5.0  # Upper limit for yaw rate
+
+
     return upper_bound
 
   def GetObservationLowerBound(self):
@@ -355,6 +447,11 @@ class mdoger7(object):
     observation.extend(self.GetMotorVelocities().tolist())
     observation.extend(self.GetMotorTorques().tolist())
     observation.extend(list(self.GetBaseOrientation()))
+    xy_velocity, yaw_rate = self.GetBaseVelocity()
+    observation.extend(xy_velocity.tolist())  # Add XY velocity to the observation
+    observation.append(yaw_rate) 
+    # print('******************') 
+    # print('observation:', observation)# Add yaw rate to the observation
     return observation
 
   def ApplyAction(self, motor_commands):

@@ -13,7 +13,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 # load policy network
 policy = PolicyNetwork(observation_dim, action_dim, hidden_dim, device=device)
-policy.load_state_dict(torch.load("./policy.pth", map_location=device))
+policy.load_state_dict(torch.load("./finalPolicy.pth", map_location=device))
 
 r = []
 
