@@ -1,14 +1,9 @@
 # -*- coding: utf-8 -*-
-"""This file implements the gym environment of mdoger7.
+"""
+This file implements the gym environment of mdoger7.
 """
 
-import os, inspect
-
-currentdir = os.path.dirname(
-    os.path.abspath(inspect.getfile(inspect.currentframe())))
-parentdir = os.path.dirname(os.path.dirname(currentdir))
-os.sys.path.insert(0, parentdir)
-
+import os
 import math
 import time
 import gym
@@ -291,8 +286,6 @@ class mdoger7BulletEnv(gym.Env):
     self._env_step_counter += 1
     reward = self._reward()
     done = self._termination()
-    # print('***********')
-    # print('reward:', reward)
     return np.array(self._noisy_observation()), reward, done, {}
 
   def render(self, mode="rgb_array", close=False):
@@ -469,6 +462,7 @@ class mdoger7BulletEnv(gym.Env):
     return observation
 
   if parse_version(gym.__version__) < parse_version('0.9.6'):
+    # print('--- --- --- {}'.format(parse_version(gym.__version__), parse_version('0.9.6')))
     _render = render
     _reset = reset
     _seed = seed
