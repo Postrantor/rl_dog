@@ -3,7 +3,7 @@
 import logging
 
 
-class Logger(object):
+class Logger():
     """
     define logger
     """

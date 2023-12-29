@@ -6,9 +6,12 @@
 import copy
 import math
 import numpy as np
-import motor
 import os
 import pybullet_data
+
+# from self
+from env import motor
+
 INIT_POSITION = [0, 0, 0.3]
 INIT_ORIENTATION = [0, 0, 0, 1]
 lower_CONSTRAINT_POINT_RIGHT = [0, 0.00, 0.]

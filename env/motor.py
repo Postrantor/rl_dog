@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
-"""This file implements an accurate motor model."""
+"""
+This file implements an accurate motor model.
+"""
 import numpy as np
 
 VOLTAGE_CLIPPING = 50
@@ -12,7 +14,7 @@ MOTOR_VISCOUS_DAMPING = 0
 MOTOR_SPEED_LIMIT = MOTOR_VOLTAGE / (MOTOR_VISCOUS_DAMPING + MOTOR_TORQUE_CONSTANT)
 
 
-class MotorModel(object):
+class MotorModel():
   """The accurate motor model, which is based on the physics of DC motors.
 
   The motor model support two types of control: position control and torque
@@ -25,7 +27,10 @@ class MotorModel(object):
   pd gains, viscous friction, back-EMF voltage and current-torque profile.
   """
 
-  def __init__(self, torque_control_enabled=False, kp=1.2, kd=0):
+  def __init__(self,
+               torque_control_enabled=False,
+               kp=1.2,
+               kd=0):
     self._torque_control_enabled = torque_control_enabled
     self._kp = kp
     self._kd = kd
@@ -48,7 +53,10 @@ class MotorModel(object):
   def get_viscous_dampling(self):
     return self._viscous_damping
 
-  def convert_to_torque(self, motor_commands, current_motor_angle, current_motor_velocity):
+  def convert_to_torque(self,
+                        motor_commands,
+                        current_motor_angle,
+                        current_motor_velocity):
     """Convert the commands (position control or torque control) to torque.
 
     Args:

@@ -16,11 +16,13 @@ from gym.utils import seeding
 import numpy as np
 import pybullet
 from pybullet_utils import bullet_client as bc
-import mdoger7
 import os
 import pybullet_data
-import mdoger7_env_randomizer
 from pkg_resources import parse_version
+
+# from self
+from env import mdoger7
+from env import mdoger7_env_randomizer
 
 NUM_SUBSTEPS = 5
 NUM_MOTORS = 12
@@ -181,9 +183,11 @@ class mdoger7BulletEnv(gym.Env):
       self._pybullet_client.setGravity(0, 0, -10)
       acc_motor = self._accurate_motor_model_enabled
       motor_protect = self._motor_overheat_protection
+
+      mdoger7_urdf_path = os.path.join(os.path.dirname(__file__), '/../mdoger7/urdf/')
       self.mdoger7 = (mdoger7.mdoger7(pybullet_client=self._pybullet_client,
                                         #  urdf_root=self._urdf_root,
-                                         time_step=self._time_step,
+                                         urdf_root=mdoger7_urdf_path,
                                          self_collision_enabled=self._self_collision_enabled,
                                          motor_velocity_limit=self._motor_velocity_limit,
                                          pd_control_enabled=self._pd_control_enabled,

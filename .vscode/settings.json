@@ -63,8 +63,8 @@
   "explorer.confirmDragAndDrop": false,
   "explorer.confirmDelete": false,
   // --- --- --- terminal --- --- ---
-  "terminal.integrated.fontSize": 18,
-  "terminal.integrated.fontFamily": "'trantor_mono', 'CaskaydiaCove Nerd Font Mono', 'ubuntu mono'",
+  "terminal.integrated.fontSize": 17,
+  "terminal.integrated.fontFamily": "'trantor_mono', 'trantor', 'CaskaydiaCove Nerd Font Mono', 'ubuntu mono'",
   "terminal.integrated.inheritEnv": false,
   // --- --- --- remote --- --- ---
   "remote.SSH.remotePlatform": {
@@ -125,8 +125,6 @@
   },
   "markdown.preview.fontSize": 18,
   "markdown.preview.fontFamily": "Trantor, -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif",
-  // --- --- --- Python --- --- ---
-  "python.formatting.provider": "yapf",
   "python.defaultInterpreterPath": "C:\\Users\\trantor\\anaconda3\\python.exe",
   "python.pythonPath": "C:\\Users\\trantor\\anaconda3\\envs\\demo\\python.exe",
   "python.jediMemoryLimit": 0, // 代码自动补全
@@ -139,10 +137,6 @@
   // "jupyter.allowLiveShare": false,
   "jupyter.exportWithOutputEnabled": true,
   "jupyter.alwaysTrustNotebooks": true,
-  // "[python]": {
-  //   "editor.defaultFormatter": "ms-python.black-formatter",
-  //   "editor.formatOnSave": true
-  // }
   // --- --- --- Extensions --- --- ---
   "vsintellicode.features.python.deepLearning": "enabled",
   "vsintellicode.modify.editor.suggestSelection": "automaticallyOverrodeDefaultValue",
@@ -154,7 +148,7 @@
   "C_Cpp.clang_format_sortIncludes": true, // 格式化时调整include的顺序（按字母排序）
   "C_Cpp.autocompleteAddParentheses": true,
   "[c]": {
-    "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
+    "editor.defaultFormatter": "ms-vscode.cpptools"
   },
   "[cpp]": {
     "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
@@ -170,7 +164,7 @@
   },
   "cmake.useCMakePresets": "always",
   // --- --- --- MATLAB --- --- ---
-  "matlab.mlintpath": "C:\\Program Files\\MATLAB\\R2023b\\bin\\win64\\mlint.exe",
+  "matlab.mlintpath": "C:\\Program Files\\MATLAB\\R2022a\\bin\\win64\\mlint.exe",
   "matlab.linterEncoding": "gbk",
   "[matlab]": {
     "files.encoding": "gbk",
@@ -395,19 +389,33 @@
       "version": "1.4.13"
     }
   },
+
+  "workbench.editor.untitled.hint": "hidden",
   "window.commandCenter": false,
   "[python]": {
-    "editor.formatOnType": true
+    "editor.formatOnType": true,
+    // "editor.defaultFormatter": "ms-python.autopep8"
   },
+  "python.formatting.provider": "autopep8",
+  "python.formatting.autopep8Args": [
+    "--indent-size",
+    "2",
+    "--ignore",
+    "E501",
+    "--max-line-length",
+    "120"
+  ],
+
   "powershell.promptToUpdatePowerShell": false,
 
   "vscodeGoogleTranslate.preferredLanguage": "Chinese (Simplified)",
   // ====== ====== ======
   // openai
   // ====== ====== ======
+  "easycode.userEmail": "835647325@qq.com",
   // "genieai.openai.maxTokens": 8000,
   // "genieai.openai.model": "gpt-4",
-  "genieai.promptPrefix.explain": "下面这段代码是 C++ 编写的代码，请以此为基础，1. 用支持 doxygen 的形式为如下的代码段添加参数列表的说明，从功能和cpp语法的角度对代码段的每一部分添加详细的中文注释，将函数功能的总结和梳理添加到 `@details` 字段中; 2. 并以中文的形式对代码块中的每一行都尽可能的添加详细的注释; 3. 注意，不要限制字符，请对内容进行完整的注释，不要省略内容; 4. 对于已经存在的注释，保留内容并翻译为中文填在在原处; 5. 添加的中文注释需要尽可能详细，因为我只是个初学者需要了解更多。示例如下：`% @brief % @param % @details % @note`",
+  "genieai.promptPrefix.explain": "下面这段代码是 Python 编写的代码，是强化学习项目中的一部分代码，请以此为基础，1. 用支持 doxygen 的形式为如下的代码段添加参数列表的说明，从功能和python语法的角度对代码段的每一部分添加详细的中文注释，将函数功能的总结和梳理添加到 `@details` 字段中; 2. 并以中文的形式对代码块中的每一行都尽可能的添加详细的注释; 3. 注意，不要限制字符，请对内容进行完整的注释，不要省略内容; 4. 对于已经存在的注释，保留内容并翻译为中文填在在原处; 5. 添加的中文注释需要尽可能详细，因为我只是个初学者需要了解更多。示例如下：`% @brief % @param % @details % @note`",
   "genieai.promptPrefix.addComments": "下面这段代码是ROS1中的项目适用于四足机器狗的控制，使用python语言编写的，请以此为基础，1. 用支持 doxygen 的形式为如下的代码段添加参数列表的说明，从功能和语法的角度对代码段的每一部分添加详细的中文注释，将函数功能的总结和梳理添加到 `@details` 字段中; 2. 并以中文的形式对代码块中的每一行都尽可能的添加详细的注释; 3. 注意，不要限制字符，请对内容进行完整的注释，不要省略内容; 4. 对于已经存在的注释，保留内容并翻译为中文填在在原处; 5. 添加的中文注释需要尽可能详细，因为我只是个初学者需要了解更多。示例如下：`#brief #param #details #note`",
   // "genieai.promptPrefix.addComments": "下面这段代码是在 ros2 项目中 ros2_planning_system 组件相关的代码，请以此为基础，满足下面的要求：1. 注意！从功能和cpp语法的角度对代码段的每一部分添加详细的中文注释；2. 对代码段的功能进行详细的总结和梳理(以1,2,3...的格式组织内容)，将其添加到注释中的 “@details” 字段；3. 添加参数列表的说明(一定要以支持 doxygen 的格式作为注释添加到代码段中)；4. 对代码中的已有的英文注释，翻译为中文。示例如下：/** * @brief * @param * @details  */。最后将输出内容通过 '```' 进行包含，以符合 markdown 格式。",
   "genieai.promptPrefix.customPrompt1-enabled": true,
@@ -447,14 +455,14 @@
     "!Split",
     "!Split sequence"
   ],
-  "C_Cpp.intelliSenseEngine": "default",
+  // "C_Cpp.intelliSenseEngine": "disabled",
   // "tabnine.experimentalAutoImports": true,
   "plantuml.server": "http://www.plantuml.com/plantuml",
   "workbench.layoutControl.enabled": false,
   "markdown-preview-enhanced.enableScriptExecution": true,
   "terminal.integrated.enableMultiLinePasteWarning": false,
   "git.openRepositoryInParentFolders": "always",
-  "workbench.colorTheme": "Bearded Theme Arc",
+  "workbench.colorTheme": "GitHub Dark",
   "C_Cpp.codeAnalysis.updateDelay": 6000,
   "aws.suppressPrompts": {
     "codeWhispererConnectionExpired": true
@@ -462,6 +470,5 @@
   "update.enableWindowsBackgroundUpdates": false,
   "update.mode": "none",
   "clangd.detectExtensionConflicts": false,
-  "window.zoomLevel": -1,
-  "workbench.editor.empty.hint": "hidden"
+  "window.zoomLevel": -1
 }
