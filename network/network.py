@@ -10,7 +10,6 @@ class SoftQNetwork(nn.Module):
   """
   Soft Q Neural Network
   """
-
   def __init__(self, state_dim, action_dim, hidden_size=256, init_w=3e-3):
     super(SoftQNetwork, self).__init__()
 
@@ -40,7 +39,6 @@ class ValueNetwork(nn.Module):
   Value Network
   Only used in SACAgent, replaced by entropy temperature in SAC2Agent
   """
-
   def __init__(self, state_dim, hidden_dim, init_w=3e-3):
     super(ValueNetwork, self).__init__()
 
@@ -67,7 +65,6 @@ class PolicyNetwork(nn.Module):
   """
   Gaussian Policy network
   """
-
   def __init__(self,
                state_dim,
                action_dim,

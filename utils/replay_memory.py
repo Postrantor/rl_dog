@@ -3,6 +3,7 @@
 import numpy as np
 import random
 
+
 class ReplayMemory():
   """
   @brief: 有限列表对象
@@ -14,7 +15,6 @@ class ReplayMemory():
 
   这个类的目的是处理强化学习算法中的回放记忆功能。在强化学习中，回放记忆用于保存之前的状态转换，供训练过程中进行样本的随机抽样。通过将状态转换保存到内存中，并从中随机选择一定数量的样本，可以使训练过程收敛更快并提高模型的性能。
   """
-
   def __init__(self, capacity):
     """
     @brief: 构造函数: 初始化有限列表对象

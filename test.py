@@ -21,22 +21,22 @@ r = []
 
 # perform 10 walks
 for i in range(10):
-	state = env.reset()
-	rewards = []
+  state = env.reset()
+  rewards = []
 
-	# let minitaur land
-	for _ in range(6):
-		p.stepSimulation()
+  # let minitaur land
+  for _ in range(6):
+    p.stepSimulation()
 
-	# perform a 1000 step walk or until fallen
-	for j in range(1000):
-		action = policy.get_action(state).detach()
-		state, reward, _, _ = env.step(action.numpy())
-		rewards.append(reward)
-		if env.is_fallen():
-			break
-		time.sleep(0.03)
+  # perform a 1000 step walk or until fallen
+  for j in range(1000):
+    action = policy.get_action(state).detach()
+    state, reward, _, _ = env.step(action.numpy())
+    rewards.append(reward)
+    if env.is_fallen():
+      break
+    time.sleep(0.03)
 
-	r.append(sum(rewards))
+  r.append(sum(rewards))
 
-print("Average reward: ", sum(r)/10)
+print("Average reward: ", sum(r) / 10)

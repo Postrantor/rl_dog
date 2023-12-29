@@ -24,7 +24,6 @@ class SACAgent:
   Soft Actor-Critic: Off-Policy Maximum Entropy Deep Reinforcement Learning with a Stochastic Actor,
   Haarnoja et al. 2018
   """
-
   def __init__(self, env, lr=3e-4, replay_buffer_size=1000000):
     """
     :param env: an instance of an OpenAI Gym environment that is being learned on.
@@ -45,13 +44,10 @@ class SACAgent:
       observation_dim = env.observation_space.n
 
     self.value_net = ValueNetwork(observation_dim, 256).to(self.device)
-    self.target_value_net = ValueNetwork(observation_dim,
-                                         256).to(self.device)
+    self.target_value_net = ValueNetwork(observation_dim, 256).to(self.device)
 
-    self.soft_q1 = SoftQNetwork(observation_dim,
-                                action_dim).to(self.device)
-    self.soft_q2 = SoftQNetwork(observation_dim,
-                                action_dim).to(self.device)
+    self.soft_q1 = SoftQNetwork(observation_dim, action_dim).to(self.device)
+    self.soft_q2 = SoftQNetwork(observation_dim, action_dim).to(self.device)
 
     self.policy = PolicyNetwork(observation_dim,
                                 action_dim,
@@ -149,7 +145,6 @@ class SAC2Agent:
   Differs from SACAgent by replacing the need for a value function with an entropy temperature parameter and tuning
   this while learning
   """
-
   def __init__(self,
                env,
                alpha=0.1,
@@ -181,10 +176,8 @@ class SAC2Agent:
     self.q1 = SoftQNetwork(observation_dim, action_dim).to(self.device)
     self.q2 = SoftQNetwork(observation_dim, action_dim).to(self.device)
 
-    self.target_q1 = SoftQNetwork(observation_dim,
-                                  action_dim).to(self.device)
-    self.target_q2 = SoftQNetwork(observation_dim,
-                                  action_dim).to(self.device)
+    self.target_q1 = SoftQNetwork(observation_dim, action_dim).to(self.device)
+    self.target_q2 = SoftQNetwork(observation_dim, action_dim).to(self.device)
     self.target_q1.load_state_dict(self.q1.state_dict())
     self.target_q2.load_state_dict(self.q2.state_dict())
 
@@ -271,12 +264,10 @@ class SAC2Agent:
     # target_param = tau * param + (1 - tau) * target_param
     for param, target_param in zip(self.q1.parameters(),
                                    self.target_q1.parameters()):
-      target_param.data.copy_(tau * param.data +
-                              (1 - tau) * target_param.data)
+      target_param.data.copy_(tau * param.data + (1 - tau) * target_param.data)
     for param, target_param in zip(self.q2.parameters(),
                                    self.target_q2.parameters()):
-      target_param.data.copy_(tau * param.data +
-                              (1 - tau) * target_param.data)
+      target_param.data.copy_(tau * param.data + (1 - tau) * target_param.data)
 
   def save_policy(self, path):
     """
@@ -358,8 +349,9 @@ def train_loop(env,
 
       # Save the policy network at 20% increments
       if intermediate_policies and not steps % (max_total_steps // 5):
-        agent.save_policy(path + "policy{}.pth".format(
-            (steps // (max_total_steps // 5))))
+        agent.save_policy(path +
+                          "policy{}.pth".format((steps //
+                                                 (max_total_steps // 5))))
 
       # Break out of loop if an end state has been reached
       if done:

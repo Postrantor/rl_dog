@@ -389,15 +389,33 @@
       "version": "1.4.13"
     }
   },
-
-  "workbench.editor.untitled.hint": "hidden",
   "window.commandCenter": false,
+  // "[python]": {
+  //   "editor.formatOnType": true,
+  //   "editor.defaultFormatter": "ms-python.autopep8"
+  // },
+
   "[python]": {
-    "editor.formatOnType": true,
-    // "editor.defaultFormatter": "ms-python.autopep8"
+    "editor.formatOnSaveMode": "file",
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "eeyore.yapf",
+    "editor.formatOnType": true
   },
-  "python.formatting.provider": "autopep8",
-  "python.formatting.autopep8Args": [
+
+  "yapf.args": ["--style", "{indent_width: 2}"],
+
+  // "python.formatting.provider": "autopep8",
+  // "python.formatting.autopep8Args": [
+  //   "--indent-size",
+  //   "2",
+  //   "--ignore",
+  //   "E501",
+  //   "--max-line-length",
+  //   "120"
+  // ],
+
+  "autopep8.showNotifications": "always",
+  "autopep8.args": [
     "--indent-size",
     "2",
     "--ignore",
@@ -424,7 +442,6 @@
   "genieai.promptPrefix.customPrompt2": "这是 matlab 中用于代码生成的 TLC 文件，请帮忙添加详细的中文注释。",
   "genieai.openai.model": "gpt-3.5-turbo-16k",
   "genieai.openai.maxTokens": 4096,
-  // ====== ====== ======
   // ====== ====== ======
   "yaml.customTags": [
     "!And",
@@ -470,5 +487,11 @@
   "update.enableWindowsBackgroundUpdates": false,
   "update.mode": "none",
   "clangd.detectExtensionConflicts": false,
-  "window.zoomLevel": -1
+  "window.zoomLevel": -1,
+  "python.condaPath": "~\\anaconda3",
+  "workbench.editor.empty.hint": "hidden",
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[xml]": {
+    "editor.defaultFormatter": "DotJoshJohnson.xml"
+  }
 }
