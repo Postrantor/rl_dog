@@ -19,10 +19,14 @@ def run_algorithm(parameters):
   # 在这里调用你的算法程序，并传入参数
   # 例如：
   # result = your_algorithm(parameters['param1'], parameters['param2'])
-  print('%d, %d', parameters['training']['drift_weight'],
-        parameters['training']['drift_weight'])
-  # pass
+  print('%d, %d', parameters['app_name']['param1'],
+        parameters['app_name']['param2'])
 
+  value = parameters['value']
+  if value == float('inf'):
+      print("Value is infinity")
+  else:
+      print("Value is not infinity")
 
 if __name__ == '__main__':
   # 读取 YAML 文件中的参数

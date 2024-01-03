@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
 
+import os
+import numpy as np
+import pybullet as p
+#
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import numpy as np
-import pybullet as p
-import os
-
-# from self
-from logger.logger import Logger  # get logger
-from utils.replay_memory import ReplayMemory
 from network.network import SoftQNetwork
 from network.network import ValueNetwork
 from network.network import PolicyNetwork
+# from self
+from logger.logger import Logger  # get logger
+from utils.replay_memory import ReplayMemory
 
 logger = Logger().get_logger()
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -280,29 +280,30 @@ class SAC2Agent:
     torch.save(self.policy.state_dict(), path)
 
 
-def train_loop(env,
-               agent,
-               max_total_steps,
-               max_steps,
-               batch_size,
-               intermediate_policies=False,
-               path="./",
-               verbose=False,
-               update_all=True):
+def train_loop(env, agent, parameters_list):
   """
-  Training loop
-  :param env: Instance of OpenAI gym environment
-  :param agent: Instance of SACAgent or SAC2Agent
-  :param max_total_steps: int, Maximum number of environment steps taken during training
-  :param max_steps: int, Maximum number of steps in each episode
-  :param batch_size: int, Size of sample taken from replay memory
-  :param intermediate_policies: Bool if you want 20, 40, 60, 80% policy saved. False by default
-  :param path: String, Where to save intermediate policies. './' by default
-  :param verbose: Bool prints progress at 1% increments. False by default
-  :param update_all: Bool whether to update after each environment step. True by default
-  :return: list of rewards achieved in training
+  训练循环
+  :param env: OpenAI gym环境的实例
+  :param agent: SACAgent或SAC2Agent的实例
+  :param max_total_steps: int, 训练过程中环境步骤的最大值
+  :param max_steps: int, 每个episode的最大步骤数
+  :param batch_size: int, 从回放记忆中提取的样本大小
+  :param intermediate_policies: Bool，是否保存20%，40%，60%，80%策略。默认为False
+  :param path: String, 保存中间策略的路径，默认为'./'
+  :param verbose: Bool，以1%的增量打印进度。默认为False
+  :param update_all: Bool，是否在每个环境步骤后更新。默认为True
+  :return: 训练过程中获得的奖励列表
   """
 
+  max_total_steps = parameters_list['max_total_steps']
+  max_steps = parameters_list['max_steps']
+  batch_size = parameters_list['batch_size']
+  path = parameters_list['path']
+  intermediate_policies = parameters_list['intermediate_policies']
+  verbose = parameters_list['verbose']
+  update_all = parameters_list['update_all']
+
+  #
   rewards = []
   steps = 0
 

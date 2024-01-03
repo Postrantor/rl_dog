@@ -102,6 +102,7 @@ class BulletEnv(gym.Env):
   space is the desired motor angle for each motor. The reward function is based
   on how far the mdoger7 walks in 1000 steps and penalizes the energy
   expenditure.
+  它模拟四足机器人 mdoger7 的运动。 状态空间包括所有电机和动作的角度、速度和扭矩space 是每个电机所需的电机角度。 奖励函数基于mdoger7 在 1000 步中行走多远并惩罚能量支出。
   """
   metadata = {
       "render.modes": ["human", "rgb_array"],
@@ -110,87 +111,67 @@ class BulletEnv(gym.Env):
 
   def __init__(
       self,
-      urdf_root=pybullet_data.getDataPath(),
-      action_repeat=1,
-      distance_weight=10.0,
-      energy_weight=0.5,
-      shake_weight=5.0,
-      drift_weight=5.0,
-      distance_limit=float("inf"),
-      observation_noise_stdev=0.0,
-      self_collision_enabled=True,
-      # self_collision_enabled=False,
-      motor_velocity_limit=np.inf,
-      pd_control_enabled=False,  #not needed to be true if accurate motor model is enabled (has its own better PD)
-      leg_model_enabled=True,
-      accurate_motor_model_enabled=True,
-      motor_kp=2.0,
-      motor_kd=0.03,
-      torque_control_enabled=False,
-      motor_overheat_protection=False,
-      hard_reset=True,
-      on_rack=False,
-      render=True,
-      kd_for_pd_controllers=0.3,
-      env_randomizer=EnvRandomizer()):
-    """
-    @brief: Initialize the mdoger7 gym environment.
-    @param: urdf_root: The path to the urdf data folder.
-    @param: action_repeat: The number of simulation steps before actions are applied.
-    @param: distance_weight: The weight of the distance term in the reward.
-    @param: energy_weight: The weight of the energy term in the reward.
-    @param: shake_weight: The weight of the vertical shakiness term in the reward.
-    @param: drift_weight: The weight of the sideways drift term in the reward.
-    @param: distance_limit: The maximum distance to terminate the episode.
-    @param: observation_noise_stdev: The standard deviation of observation noise.
-    @param: self_collision_enabled: Whether to enable self collision in the sim.
-    @param: motor_velocity_limit: The velocity limit of each motor.
-    @param: pd_control_enabled: Whether to use PD controller for each motor.
-    @param: leg_model_enabled: Whether to use a leg motor to reparameterize the action space.
-    @param: accurate_motor_model_enabled: Whether to use the accurate DC motor model.
-    @param: motor_kp: proportional gain for the accurate motor model.
-    @param: motor_kd: derivative gain for the accurate motor model.
-    @param: torque_control_enabled: Whether to use the torque control, if set to False, pose control will be used.
-    @param: motor_overheat_protection: Whether to shutdown the motor that has exerted large torque (OVERHEAT_SHUTDOWN_TORQUE) for an extended amount of time (OVERHEAT_SHUTDOWN_TIME). See ApplyAction() in minitaur.py for more details.
-    @param: hard_reset: Whether to wipe the simulation and load everything when reset is called. If set to false, reset just place the minitaur back to start position and set its pose to initial configuration.
-    @param: on_rack: Whether to place the minitaur on rack. This is only used to debug the walking gait. In this mode, the minitaur's base is hanged midair so that its walking gait is clearer to visualize.
-    @param: render: Whether to render the simulation.
-    @param: kd_for_pd_controllers: kd value for the pd controllers of the motors
-    @param: env_randomizer: An EnvRandomizer to randomize the physical properties during reset().
-    """
+      parameters_list,
+      urdf_root=pybullet_data.getDataPath(),  # 默认值为pybullet_data的路径
+      env_randomizer=EnvRandomizer(),  # 用于在reset()期间随机化物理属性的EnvRandomizer。
+      # render=True,  # 是否渲染仿真
+      # action_repeat=1,  # 运动重复的次数
+      # distance_weight=10.0,  # 距离项在奖励中的权重
+      # energy_weight=0.5,  # 能量项在奖励中的权重
+      # shake_weight=5.0,  # 垂直摇晃项在奖励中的权重
+      # drift_weight=5.0,  # 侧向漂移项在奖励中的权重
+      # observation_noise_stdev=0.0,  # 观察噪声的标准差
+      # distance_limit=float("inf"),  # 终止episode的最大距离
+      # self_collision_enabled=True,  # 是否允许机器人自身碰撞
+      # hard_reset=True,  # 是否在重置时清除仿真并加载所有内容。如果设置为false，则重置只是将model放回起始位置并将其姿势设为初始配置。
+      # on_rack=False,  # 是否将model放在架子上。这仅用于调试行走步态。在此模式下，model的基座悬挂在半空中，以便更清晰地可视化其步态。
+      # motor_velocity_limit=float("inf"),  # 每个马达的速度限制(原np.inf，修改为float("inf"))
+      # pd_control_enabled=False,  # 是否为每个马达启用PD控制器
+      # leg_model_enabled=True,  # 是否使用腿部马达重新参数化动作空间
+      # accurate_motor_model_enabled=True,  # 是否使用准确的直流电机模型
+      # torque_control_enabled=False,  # 是否使用扭矩控制，如果设置为False，则使用姿态控制
+      # motor_overheat_protection=False,  # 是否关闭已施加大力矩(OVERHEAT_SHUTDOWN_TORQUE)的电机，以防止过热(OVERHEAT_SHUTDOWN_TIME)。有关更多详细信息，请参见minitaur.py中的ApplyAction()函数。
+      # motor_kp=2.0,  # 准确电机模型的比例增益
+      # motor_kd=0.03,  # 准确电机模型的微分增益
+      # kd_for_pd_controllers=0.3,  # 用于马达的PD控制器的kd值
+  ):
 
-    self._time_step = 0.01
-    self._action_repeat = action_repeat
-    self._num_bullet_solver_iterations = 300
     self._urdf_root = urdf_root
-    self._self_collision_enabled = self_collision_enabled
-    self._motor_velocity_limit = motor_velocity_limit
+    self._env_randomizer = env_randomizer
+    self._time_step = 0.01
+    self._num_bullet_solver_iterations = 300
     self._observation = []
     self._env_step_counter = 0
-    self._is_render = render
     self._last_base_position = [0, 0, 0]
-    self._distance_weight = distance_weight
-    self._energy_weight = energy_weight
-    self._drift_weight = drift_weight
-    self._shake_weight = shake_weight
-    self._distance_limit = distance_limit
-    self._observation_noise_stdev = observation_noise_stdev
     self._action_bound = 1
-    self._pd_control_enabled = pd_control_enabled
-    self._leg_model_enabled = leg_model_enabled
-    self._accurate_motor_model_enabled = accurate_motor_model_enabled
-    self._motor_kp = motor_kp
-    self._motor_kd = motor_kd
-    self._torque_control_enabled = torque_control_enabled
-    self._motor_overheat_protection = motor_overheat_protection
-    self._on_rack = on_rack
     self._cam_dist = 1.0
     self._cam_yaw = 0
     self._cam_pitch = -30
-    self._hard_reset = True
-    self._kd_for_pd_controllers = kd_for_pd_controllers
     self._last_frame_time = 0.0
-    self._env_randomizer = env_randomizer
+    self._is_render = parameters_list['render']
+    self._action_repeat = parameters_list['action_repeat']
+    self._self_collision_enabled = parameters_list['self_collision_enabled']
+    self._motor_velocity_limit = parameters_list['motor_velocity_limit']
+    self._distance_weight = parameters_list['distance_weight']
+    self._energy_weight = parameters_list['energy_weight']
+    self._drift_weight = parameters_list['drift_weight']
+    self._shake_weight = parameters_list['shake_weight']
+    self._distance_limit = parameters_list['distance_limit']
+    self._observation_noise_stdev = parameters_list['observation_noise_stdev']
+    self._leg_model_enabled = parameters_list['leg_model_enabled']
+    self._motor_kp = parameters_list['motor_kp']
+    self._motor_kd = parameters_list['motor_kd']
+    self._torque_control_enabled = parameters_list['torque_control_enabled']
+    self._motor_overheat_protection = parameters_list['motor_overheat_protection']
+    self._on_rack = parameters_list['on_rack']
+    self._kd_for_pd_controllers = parameters_list['kd_for_pd_controllers']
+
+    self._hard_reset = True
+    hard_reset = parameters_list['hard_reset']
+    pd_control_enabled = parameters_list['pd_control_enabled']
+    accurate_motor_model_enabled = parameters_list['accurate_motor_model_enabled']
+    self._pd_control_enabled = parameters_list['pd_control_enabled']
+    self._accurate_motor_model_enabled = parameters_list['accurate_motor_model_enabled']
 
     # PD control needs smaller time step for stability.
     if pd_control_enabled or accurate_motor_model_enabled:
