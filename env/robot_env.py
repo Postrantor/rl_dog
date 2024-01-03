@@ -162,16 +162,19 @@ class BulletEnv(gym.Env):
     self._motor_kp = parameters_list['motor_kp']
     self._motor_kd = parameters_list['motor_kd']
     self._torque_control_enabled = parameters_list['torque_control_enabled']
-    self._motor_overheat_protection = parameters_list['motor_overheat_protection']
+    self._motor_overheat_protection = parameters_list[
+        'motor_overheat_protection']
     self._on_rack = parameters_list['on_rack']
     self._kd_for_pd_controllers = parameters_list['kd_for_pd_controllers']
 
     self._hard_reset = True
     hard_reset = parameters_list['hard_reset']
     pd_control_enabled = parameters_list['pd_control_enabled']
-    accurate_motor_model_enabled = parameters_list['accurate_motor_model_enabled']
+    accurate_motor_model_enabled = parameters_list[
+        'accurate_motor_model_enabled']
     self._pd_control_enabled = parameters_list['pd_control_enabled']
-    self._accurate_motor_model_enabled = parameters_list['accurate_motor_model_enabled']
+    self._accurate_motor_model_enabled = parameters_list[
+        'accurate_motor_model_enabled']
 
     # PD control needs smaller time step for stability.
     if pd_control_enabled or accurate_motor_model_enabled:
@@ -299,20 +302,15 @@ class BulletEnv(gym.Env):
       time_to_sleep = self._action_repeat * self._time_step - time_spent
       if time_to_sleep > 0:
         time.sleep(time_to_sleep)
+
       base_pos = self.robot.GetBasePosition()
       camInfo = self._pybullet_client.getDebugVisualizerCamera()
-      # print("camInfo:", camInfo)
-      curTargetPos = camInfo[11]
       distance = camInfo[10]
       yaw = camInfo[8]
       pitch = camInfo[9]
-      targetPos = [
-          0.95 * curTargetPos[0] + 0.05 * base_pos[0],
-          0.95 * curTargetPos[1] + 0.05 * base_pos[1], curTargetPos[2]
-      ]
-
       self._pybullet_client.resetDebugVisualizerCamera(distance, yaw, pitch,
                                                        base_pos)
+
     action = self._transform_action_to_motor_command(action)
     for _ in range(self._action_repeat):
       self.robot.ApplyAction(action)
