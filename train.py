@@ -14,7 +14,7 @@ def algorithm_rl(parameter_list):
 
   # 创建BulletEnv环境对象及Agent对象
   env = e.BulletEnv(parameter_list['environment'])
-  agent = SAC2Agent(env)
+  agent = SAC2Agent(env, parameter_list['sac'])
 
   # 使用训练循环函数进行训练
   train_loop(env, agent, parameter_list['training'])

@@ -1,3 +1,10 @@
+sac:
+  alpha: 0.1 # 初始alpha值，float类型
+  alr: 1e-4 # 用于更新alpha的学习率，float类型
+  qlr: 1e-4 # 用于更新q函数的学习率，float类型
+  policy_lr: 1e-4 # 用于更新策略函数的学习率，float类型
+  mem_size: 1e6 # 回放缓冲区的大小，int类型，默认为1e6
+
 training:
   max_total_steps: 500000 # 训练过程中环境步骤的最大值
   max_steps: 1000 # 每个episode的最大步骤数

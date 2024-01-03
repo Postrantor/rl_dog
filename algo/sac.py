@@ -143,25 +143,26 @@ class SAC2Agent:
   """
   Agent for the second generation of the Soft Actor Critic learning algorithm presented in
   Soft Actor-Critic Algorithms and Applications, Haarnoja et al. 2018
-  Differs from SACAgent by replacing the need for a value function with an entropy temperature parameter and tuning
-  this while learning
+  
+  Differs from SACAgent by replacing the need for a value function with an entropy temperature parameter and tuning this while learning
+  > 与SACAgent不同之处在于，它通过消除对值函数的需求，并使用熵温度参数来进行调整
   """
 
-  def __init__(self,
-               env,
-               alpha=0.1,
-               alr=1e-4,
-               qlr=1e-4,
-               policy_lr=1e-4,
-               mem_size=1e6):
+  def __init__(self, env, parameters_list):
     """
-    :param env: an instance of an OpenAI Gym environment that is being learned on.
-    :param alpha: float, initial value for alpha
-    :param alr: float, the learning rate used to update alpha
-    :param qlr: float, the learning rate used to update the q functions
-    :param policy_lr: float, the learning rate used to update the policy function
-    :param mem_size: int, size of the replay buffer, 1e6 by default
+    :param env: OpenAI Gym环境的实例，模型将在其上进行学习
+    :param alpha: 初始alpha值，float类型
+    :param alr: 用于更新alpha的学习率，float类型
+    :param qlr: 用于更新q函数的学习率，float类型
+    :param policy_lr: 用于更新策略函数的学习率，float类型
+    :param mem_size: 回放缓冲区的大小，int类型，默认为1e6
     """
+
+    alpha = parameters_list['alpha']
+    alr = parameters_list['alr']
+    qlr = parameters_list['qlr']
+    policy_lr = parameters_list['policy_lr']
+    mem_size = parameters_list['mem_size']
 
     try:
       action_dim = env.action_space.shape[0]
@@ -173,7 +174,6 @@ class SAC2Agent:
       observation_dim = env.observation_space.n
 
     self.device = "cuda" if torch.cuda.is_available() else "cpu"
-    # print('--- --- --- %s', device)
 
     self.q1 = SoftQNetwork(observation_dim, action_dim).to(self.device)
     self.q2 = SoftQNetwork(observation_dim, action_dim).to(self.device)
