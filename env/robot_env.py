@@ -138,16 +138,19 @@ class BulletEnv(gym.Env):
 
     self._urdf_root = urdf_root
     self._env_randomizer = env_randomizer
+
     self._time_step = 0.01
-    self._num_bullet_solver_iterations = 300
-    self._observation = []
-    self._env_step_counter = 0
-    self._last_base_position = [0, 0, 0]
-    self._action_bound = 1
     self._cam_dist = 1.0
     self._cam_yaw = 0
     self._cam_pitch = -30
+    self._env_step_counter = 0
     self._last_frame_time = 0.0
+
+    self._num_bullet_solver_iterations = 300
+    self._observation = []
+    self._last_base_position = [0, 0, 0]
+    self._action_bound = 1
+
     self._is_render = parameters_list['render']
     self._action_repeat = parameters_list['action_repeat']
     self._self_collision_enabled = parameters_list['self_collision_enabled']
@@ -423,8 +426,6 @@ class BulletEnv(gym.Env):
   def _reward(self):
     orientation = self.robot.GetBaseOrientation()
     rot_mat = self._pybullet_client.getMatrixFromQuaternion(orientation)
-    # print("rot_mat:", rot_mat)
-    # print("Type of rot_mat:", type(rot_mat))
     local_up_x = rot_mat[0:3]
     local_up_y = rot_mat[3:6]
     local_up_z = rot_mat[6:]
@@ -475,7 +476,6 @@ class BulletEnv(gym.Env):
         forward_reward, energy_reward, drift_reward, shake_reward,
         xy_velocity_reward, yaw_rate_reward, height_reward
     ])
-    # print('reward:', reward)
     return reward
 
   def get_objectives(self):
