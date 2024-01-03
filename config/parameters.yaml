@@ -1,0 +1,12 @@
+training:
+  # 创建BulletEnv环境对象
+  render: True # 是否显示图形界面
+  drift_weight: 5 # 漂移权重
+  shake_weight: 5 # 摇晃权重
+  energy_weight: 0.5 # 能量权重
+  # 使用训练循环函数进行训练
+  max_total_steps: 500000 # 训练的总轮数
+  max_steps: 1000 # 每轮训练的最大时间步数
+  batch_size: 256 # 批次大小
+  intermediate_policies: True # 是否保存每个训练阶段的中间策略
+  verbose: True # 是否打印训练过程中的详细信息
