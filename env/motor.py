@@ -1,42 +1,33 @@
 # -*- coding: utf-8 -*-
 """
-This file implements an accurate motor model.
+本文件实现了一个准确的电机模型。
 """
 import numpy as np
 
-VOLTAGE_CLIPPING = 50
-OBSERVED_TORQUE_LIMIT = 5.7
-MOTOR_VOLTAGE = 16.0
-MOTOR_RESISTANCE = 0.186
-MOTOR_TORQUE_CONSTANT = 0.0954
-MOTOR_VISCOUS_DAMPING = 0
-MOTOR_SPEED_LIMIT = MOTOR_VOLTAGE / (MOTOR_VISCOUS_DAMPING +
-                                     MOTOR_TORQUE_CONSTANT)
-
-
 class MotorModel():
-  """The accurate motor model, which is based on the physics of DC motors.
+  """
+  @brief 准确的电机模型，基于直流电动机的物理原理。
 
-  The motor model support two types of control: position control and torque
-  control. In position control mode, a desired motor angle is specified, and a
-  torque is computed based on the internal motor model. When the torque control
-  is specified, a pwm signal in the range of [-1.0, 1.0] is converted to the
-  torque.
+  该电机模型支持两种控制类型：位置控制和力矩控制。在位置控制模式下，指定了期望的电机角度，并根据内部电机模型计算出力矩。当指定力矩控制时，将PWM信号转换为力矩。
 
-  The internal motor model takes the following factors into consideration:
-  pd gains, viscous friction, back-EMF voltage and current-torque profile.
+  内部电机模型考虑以下因素：比例-微分增益、粘性摩擦、背电动势电压和电流-力矩曲线。
   """
 
-  def __init__(self, torque_control_enabled=False, kp=1.2, kd=0):
-    self._torque_control_enabled = torque_control_enabled
-    self._kp = kp
-    self._kd = kd
-    self._resistance = MOTOR_RESISTANCE
-    self._voltage = MOTOR_VOLTAGE
-    self._torque_constant = MOTOR_TORQUE_CONSTANT
-    self._viscous_damping = MOTOR_VISCOUS_DAMPING
+  def __init__(self, parameters_list):
+    self._torque_control_enabled = parameters_list['torque_control_enabled']
+    self._kp = parameters_list['kp']
+    self._kd = parameters_list['kd']
+    self._resistance = parameters_list['motor_resistance'] # 电机电阻为0.186
+    self._voltage = parameters_list['motor_voltage'] # 电机电压为16.0
+    self._torque_constant = parameters_list['motor_torque_constant'] # 电机转矩常数为0.0954
+    self._viscous_damping = parameters_list['motor_viscous_damping'] # 电机粘性阻尼为0
     self._current_table = [0, 10, 20, 30, 40, 50, 60]
     self._torque_table = [0, 1, 1.9, 2.45, 3.0, 3.25, 3.5]
+
+    self._voltage_clipping = parameters_list['voltage_clipping'] # 电压限制为50V
+    self._observed_torque_limit = parameters_list['observed_torque_limit'] # 观测到的力矩限制为5.7
+
+    self._motor_speed_limit = parameters_list['motor_speed_limit'] # 电机速度限制
 
   def set_voltage(self, voltage):
     self._voltage = voltage
@@ -47,21 +38,19 @@ class MotorModel():
   def set_viscous_damping(self, viscous_damping):
     self._viscous_damping = viscous_damping
 
-  def get_viscous_dampling(self):
+  def get_viscous_damping(self):
     return self._viscous_damping
 
-  def convert_to_torque(self, motor_commands, current_motor_angle,
+  def convert_to_torque(self, motor_commands,
+                        current_motor_angle,
                         current_motor_velocity):
-    """Convert the commands (position control or torque control) to torque.
-
-    Args:
-      motor_commands: The desired motor angle if the motor is in position
-        control mode. The pwm signal if the motor is in torque control mode.
-      current_motor_angle: The motor angle at the current time step.
-      current_motor_velocity: The motor velocity at the current time step.
-    Returns:
-      actual_torque: The torque that needs to be applied to the motor.
-      observed_torque: The torque observed by the sensor.
+    """
+    @brief 将命令（位置控制或力矩控制）转换为力矩
+    @param motor_commands: 如果电机处于位置控制模式，则是期望的电机角度。如果电机处于力矩控制模式，则是PWM信号。
+    @param current_motor_angle: 当前时间步骤的电机角度。
+    @param current_motor_velocity: 当前时间步骤的电机速度。
+    @return actual_torque: 需要施加到电机上的力矩。
+    @return observed_torque: 传感器观测到的力矩。
     """
     if self._torque_control_enabled:
       pwm = motor_commands
@@ -72,29 +61,27 @@ class MotorModel():
     return self._convert_to_torque_from_pwm(pwm, current_motor_velocity)
 
   def _convert_to_torque_from_pwm(self, pwm, current_motor_velocity):
-    """Convert the pwm signal to torque.
-
-    Args:
-      pwm: The pulse width modulation.
-      current_motor_velocity: The motor velocity at the current time step.
-    Returns:
-      actual_torque: The torque that needs to be applied to the motor.
-      observed_torque: The torque observed by the sensor.
+    """
+    @brief 将PWM信号转换为力矩
+    @param pwm: 脉冲宽度调制信号（PWM）
+    @param current_motor_velocity: 当前时间步骤的电机速度。
+    @return actual_torque: 需要施加到电机上的力矩。
+    @return observed_torque: 传感器观测到的力矩。
     """
     observed_torque = np.clip(
         self._torque_constant * (pwm * self._voltage / self._resistance),
-        -OBSERVED_TORQUE_LIMIT, OBSERVED_TORQUE_LIMIT)
+        -self._observed_torque_limit, self._observed_torque_limit)
 
-    # Net voltage is clipped at 50V by diodes on the motor controller.
+    # 通过电机控制器上的二极管将净电压限制在50V。
     voltage_net = np.clip(
         pwm * self._voltage - (self._torque_constant + self._viscous_damping) *
-        current_motor_velocity, -VOLTAGE_CLIPPING, VOLTAGE_CLIPPING)
+        current_motor_velocity, -self._voltage_clipping,
+        self._voltage_clipping)
     current = voltage_net / self._resistance
     current_sign = np.sign(current)
     current_magnitude = np.absolute(current)
 
-    # Saturate torque based on empirical current relation.
-    actual_torque = np.interp(current_magnitude, self._current_table,
-                              self._torque_table)
+    # 根据经验电流关系对力矩进行饱和处理。
+    actual_torque = np.interp(current_magnitude, self._current_table, self._torque_table)
     actual_torque = np.multiply(current_sign, actual_torque)
     return actual_torque, observed_torque

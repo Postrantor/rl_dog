@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
-"""This file implements the functionalities of a minitaur using pybullet.
+"""
+This file implements the functionalities of a minitaur using pybullet.
 """
 
 import copy
 import math
 import numpy as np
-import os
 import pybullet_data
-
 # from self
 from env import motor
 
@@ -19,10 +18,10 @@ OVERHEAT_SHUTDOWN_TORQUE = 2.45
 OVERHEAT_SHUTDOWN_TIME = 1.0
 LEG_POSITION = ["lf", "rf", "lb", "rb"]
 MOTOR_NAMES = [
-    "lf1_joint", "lf2_joint", "lf3_joint", "rf1_joint", "rf2_joint",
-    "rf3_joint", "lb1_joint", "lb2_joint", "lb3_joint", "rb1_joint",
-    "rb2_joint", "rb3_joint"
-]
+    "lf1_joint", "lf2_joint", "lf3_joint",
+    "rf1_joint", "rf2_joint", "rf3_joint",
+    "lb1_joint", "lb2_joint", "lb3_joint",
+    "rb1_joint", "rb2_joint", "rb3_joint"]
 
 NUM_LEGS = 4
 DEFAULT_ABDUCTION_ANGLE = 0.0
@@ -49,25 +48,12 @@ class Robot():
   The mdoger7 class that simulates a quadruped robot from Ghost Robotics.
   """
 
-  def __init__(self,
-               pybullet_client,
-               urdf_root=os.path.join(os.path.dirname(__file__)),
-               time_step=0.01,
-               self_collision_enabled=False,
-               motor_velocity_limit=np.inf,
-               pd_control_enabled=False,
-               accurate_motor_model_enabled=False,
-               motor_kp=8.0,
-               motor_kd=0.2,
-               torque_control_enabled=False,
-               motor_overheat_protection=False,
-               on_rack=False,
-               kd_for_pd_controllers=0.3):
-    """Constructs a mdoger7 and reset it to the initial states.
+  def __init__(self, parameters_list, pybullet_client, urdf_root):
+    """
+    Constructs a mdoger7 and reset it to the initial states.
 
     Args:
-      pybullet_client: The instance of BulletClient to manage different
-        simulations.
+      pybullet_client: The instance of BulletClient to manage different simulations.
       urdf_root: The path to the urdf folder.
       time_step: The time step of the simulation.
       self_collision_enabled: Whether to enable self collision.
@@ -76,24 +62,20 @@ class Robot():
       accurate_motor_model_enabled: Whether to use the accurate DC motor model.
       motor_kp: proportional gain for the accurate motor model
       motor_kd: derivative gain for the acurate motor model
-      torque_control_enabled: Whether to use the torque control, if set to
-        False, pose control will be used.
-      motor_overheat_protection: Whether to shutdown the motor that has exerted
-        large torque (OVERHEAT_SHUTDOWN_TORQUE) for an extended amount of time
-        (OVERHEAT_SHUTDOWN_TIME). See ApplyAction() in mdoger7.py for more
-        details.
-      on_rack: Whether to place the mdoger7 on rack. This is only used to debug
-        the walking gait. In this mode, the mdoger7's base is hanged midair so
-        that its walking gait is clearer to visualize.
+      torque_control_enabled: Whether to use the torque control, if set to False, pose control will be used.
+      motor_overheat_protection: Whether to shutdown the motor that has exerted large torque (OVERHEAT_SHUTDOWN_TORQUE) for an extended amount of time (OVERHEAT_SHUTDOWN_TIME). See ApplyAction() in mdoger7.py for more details.
+      on_rack: Whether to place the mdoger7 on rack. This is only used to debug the walking gait. In this mode, the mdoger7's base is hanged midair so that its walking gait is clearer to visualize.
       kd_for_pd_controllers: kd value for the pd controllers of the motors.
     """
     self.num_motors = 12
     self.num_legs = int(self.num_motors / 3)
     self._pybullet_client = pybullet_client
     self._urdf_root = urdf_root
-    self._self_collision_enabled = self_collision_enabled
-    self._motor_velocity_limit = motor_velocity_limit
-    self._pd_control_enabled = pd_control_enabled
+
+    self.parameters_list = parameters_list
+    self._self_collision_enabled = parameters_list['self_collision_enabled']
+    self._motor_velocity_limit = parameters_list['motor_velocity_limit']
+    self._pd_control_enabled = parameters_list['pd_control_enabled']
     self._motor_direction = [-1, -1, 1, 1, -1, 1, 1, -1, 1, -1, -1, 1]
     self._h1motor_direction = [-1, -1, 1, 1]
     self._h2motor_direction = [-1, 1, 1, -1]
@@ -101,26 +83,30 @@ class Robot():
     self._observed_motor_torques = np.zeros(self.num_motors)
     self._applied_motor_torques = np.zeros(self.num_motors)
     self._max_force = 15
-    self._accurate_motor_model_enabled = accurate_motor_model_enabled
-    self._torque_control_enabled = torque_control_enabled
-    self._motor_overheat_protection = motor_overheat_protection
-    self._on_rack = on_rack
+    self._accurate_motor_model_enabled = parameters_list[
+        'accurate_motor_model_enabled']
+    # self._torque_control_enabled = parameters_list['torque_control_enabled']
+    self._motor_overheat_protection = parameters_list[
+        'motor_overheat_protection']
+    self._on_rack = parameters_list['on_rack']
+
     self.ground_id = self._pybullet_client.loadURDF(
         "%s/plane.urdf" % pybullet_data.getDataPath())
     if self._accurate_motor_model_enabled:
-      self._kp = motor_kp
-      self._kd = motor_kd
-      self._motor_model = motor.MotorModel(
-          torque_control_enabled=self._torque_control_enabled,
-          kp=self._kp,
-          kd=self._kd)
+      self._kp = parameters_list['motor_kp']
+      self._kd = parameters_list['motor_kd']
+      self._motor_model = motor.MotorModel(parameters_list['motor'])
+      # self._motor_model = motor.MotorModel(
+      #     torque_control_enabled=self._torque_control_enabled,
+      #     kp=self._kp,
+      #     kd=self._kd)
     elif self._pd_control_enabled:
       self._kp = 1
-      self._kd = kd_for_pd_controllers
+      self._kd = parameters_list['kd_for_pd_controllers']
     else:
       self._kp = 1
       self._kd = 1
-    self.time_step = time_step
+    self.time_step = parameters_list['time_step']
     self.Reset()
 
   def _RecordMassInfoFromURDF(self):
@@ -432,10 +418,8 @@ class Robot():
     # upper_bound[3 * self.num_motors:] = 1.0  # Quaternion of base orientation.
     upper_bound = np.array([0.0] * self.GetObservationDimension())
     upper_bound[0:self.num_motors] = math.pi  # Joint angle.
-    upper_bound[self.num_motors:2 *
-                self.num_motors] = motor.MOTOR_SPEED_LIMIT  # Joint velocity.
-    upper_bound[2 * self.num_motors:3 *
-                self.num_motors] = motor.OBSERVED_TORQUE_LIMIT  # Joint torque.
+    upper_bound[self.num_motors:2 * self.num_motors] = self.parameters_list['motor']['motor_speed_limit'] # Joint velocity.
+    upper_bound[2 * self.num_motors:3 * self.num_motors] = self.parameters_list['motor']['observed_torque_limit']  # Joint torque.
     upper_bound[3 * self.num_motors:3 * self.num_motors +
                 4] = 1.0  # Quaternion of base orientation.
 

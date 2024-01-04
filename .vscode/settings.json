@@ -402,7 +402,7 @@
     "editor.formatOnType": true
   },
 
-  "yapf.args": ["--style", "{indent_width: 2}"],
+  "yapf.args": ["--style", "{indent_width: 2}", "{column_limit: 120}"],
 
   // "python.formatting.provider": "autopep8",
   // "python.formatting.autopep8Args": [

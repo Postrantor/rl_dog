@@ -112,28 +112,8 @@ class BulletEnv(gym.Env):
   def __init__(
       self,
       parameters_list,
-      urdf_root=pybullet_data.getDataPath(),  # 默认值为pybullet_data的路径
+      urdf_root=pybullet_data.getDataPath(),
       env_randomizer=EnvRandomizer(),  # 用于在reset()期间随机化物理属性的EnvRandomizer。
-      # render=True,  # 是否渲染仿真
-      # action_repeat=1,  # 运动重复的次数
-      # distance_weight=10.0,  # 距离项在奖励中的权重
-      # energy_weight=0.5,  # 能量项在奖励中的权重
-      # shake_weight=5.0,  # 垂直摇晃项在奖励中的权重
-      # drift_weight=5.0,  # 侧向漂移项在奖励中的权重
-      # observation_noise_stdev=0.0,  # 观察噪声的标准差
-      # distance_limit=float("inf"),  # 终止episode的最大距离
-      # self_collision_enabled=True,  # 是否允许机器人自身碰撞
-      # hard_reset=True,  # 是否在重置时清除仿真并加载所有内容。如果设置为false，则重置只是将model放回起始位置并将其姿势设为初始配置。
-      # on_rack=False,  # 是否将model放在架子上。这仅用于调试行走步态。在此模式下，model的基座悬挂在半空中，以便更清晰地可视化其步态。
-      # motor_velocity_limit=float("inf"),  # 每个马达的速度限制(原np.inf，修改为float("inf"))
-      # pd_control_enabled=False,  # 是否为每个马达启用PD控制器
-      # leg_model_enabled=True,  # 是否使用腿部马达重新参数化动作空间
-      # accurate_motor_model_enabled=True,  # 是否使用准确的直流电机模型
-      # torque_control_enabled=False,  # 是否使用扭矩控制，如果设置为False，则使用姿态控制
-      # motor_overheat_protection=False,  # 是否关闭已施加大力矩(OVERHEAT_SHUTDOWN_TORQUE)的电机，以防止过热(OVERHEAT_SHUTDOWN_TIME)。有关更多详细信息，请参见minitaur.py中的ApplyAction()函数。
-      # motor_kp=2.0,  # 准确电机模型的比例增益
-      # motor_kd=0.03,  # 准确电机模型的微分增益
-      # kd_for_pd_controllers=0.3,  # 用于马达的PD控制器的kd值
   ):
 
     self._urdf_root = urdf_root
@@ -151,30 +131,30 @@ class BulletEnv(gym.Env):
     self._last_base_position = [0, 0, 0]
     self._action_bound = 1
 
-    self._is_render = parameters_list['render']
-    self._action_repeat = parameters_list['action_repeat']
-    self._self_collision_enabled = parameters_list['self_collision_enabled']
-    self._motor_velocity_limit = parameters_list['motor_velocity_limit']
-    self._distance_weight = parameters_list['distance_weight']
-    self._energy_weight = parameters_list['energy_weight']
-    self._drift_weight = parameters_list['drift_weight']
-    self._shake_weight = parameters_list['shake_weight']
-    self._distance_limit = parameters_list['distance_limit']
-    self._observation_noise_stdev = parameters_list['observation_noise_stdev']
-    self._leg_model_enabled = parameters_list['leg_model_enabled']
-    self._motor_kp = parameters_list['motor_kp']
-    self._motor_kd = parameters_list['motor_kd']
-    self._torque_control_enabled = parameters_list['torque_control_enabled']
-    self._motor_overheat_protection = parameters_list[
-        'motor_overheat_protection']
-    self._on_rack = parameters_list['on_rack']
-    self._kd_for_pd_controllers = parameters_list['kd_for_pd_controllers']
+    self.parameters_list = parameters_list
+
+    self._is_render = parameters_list['render']  # 是否渲染仿真
+    self._action_repeat = parameters_list['action_repeat']  # 运动重复的次数
+    self._distance_weight = parameters_list['distance_weight']  # 距离项在奖励中的权重
+    self._energy_weight = parameters_list['energy_weight']  # 能量项在奖励中的权重
+    self._drift_weight = parameters_list['drift_weight']  # 侧向漂移项在奖励中的权重
+    self._shake_weight = parameters_list['shake_weight']  # 垂直摇晃项在奖励中的权重
+    self._distance_limit = parameters_list['distance_limit']  # 终止episode的最大距离
+    self._observation_noise_stdev = parameters_list[
+        'observation_noise_stdev']  # 观察噪声的标准差
+    self._leg_model_enabled = parameters_list[
+        'leg_model_enabled']  # 是否使用腿部马达重新参数化动作空间
+    self._torque_control_enabled = parameters_list[
+        'torque_control_enabled']  # 是否使用扭矩控制，否则使用姿态控制
 
     self._hard_reset = True
-    hard_reset = parameters_list['hard_reset']
-    pd_control_enabled = parameters_list['pd_control_enabled']
+    hard_reset = parameters_list[
+        'hard_reset']  # 是否在重置时清除仿真并加载所有内容。如果设置为false，则重置只是将model放回起始位置并将其姿势设为初始配置。
+    pd_control_enabled = parameters_list[
+        'pd_control_enabled']  # 是否为每个马达启用PD控制器
+
     accurate_motor_model_enabled = parameters_list[
-        'accurate_motor_model_enabled']
+        'accurate_motor_model_enabled']  # 是否使用准确的直流电机模型
     self._pd_control_enabled = parameters_list['pd_control_enabled']
     self._accurate_motor_model_enabled = parameters_list[
         'accurate_motor_model_enabled']
@@ -231,22 +211,12 @@ class BulletEnv(gym.Env):
           self._pybullet_client.COV_ENABLE_PLANAR_REFLECTION, 0)
       self._pybullet_client.setGravity(0, 0, -10)
       acc_motor = self._accurate_motor_model_enabled
-      motor_protect = self._motor_overheat_protection
 
       robot_urdf_path = os.path.join(os.path.dirname(__file__),
                                      '/../mdoger7/urdf/')
-      self.robot = Robot(pybullet_client=self._pybullet_client,
-                         urdf_root=robot_urdf_path,
-                         self_collision_enabled=self._self_collision_enabled,
-                         motor_velocity_limit=self._motor_velocity_limit,
-                         pd_control_enabled=self._pd_control_enabled,
-                         accurate_motor_model_enabled=acc_motor,
-                         motor_kp=self._motor_kp,
-                         motor_kd=self._motor_kd,
-                         torque_control_enabled=self._torque_control_enabled,
-                         motor_overheat_protection=motor_protect,
-                         on_rack=self._on_rack,
-                         kd_for_pd_controllers=self._kd_for_pd_controllers)
+      self.robot = Robot(self.parameters_list['robot'],
+                         pybullet_client=self._pybullet_client,
+                         urdf_root=robot_urdf_path)
     else:
       self.robot.Reset(reload_urdf=False)
 
@@ -270,16 +240,6 @@ class BulletEnv(gym.Env):
   def seed(self, seed=None):
     self.np_random, seed = seeding.np_random(seed)
     return [seed]
-
-  def _transform_action_to_motor_command(self, action):
-    if self._leg_model_enabled:
-      for i, action_component in enumerate(action):
-        if not (-self._action_bound - ACTION_EPS <= action_component <=
-                self._action_bound + ACTION_EPS):
-          raise ValueError("{}th action {} out of bounds.".format(
-              i, action_component))
-      action = self.robot.ConvertFromLegModel(action)
-    return action
 
   def step(self, action):
     """Step forward the simulation, given the action.
@@ -416,6 +376,9 @@ class BulletEnv(gym.Env):
     # return (abs(roll) > 0.174 or abs(pitch) > 0.174 or abs(yaw) > 0.174 or pos[2] < 0.25)
     # return (np.dot(np.asarray([1, 0, 0]), np.asarray(local_up_x)) > 0.985 or np.dot(np.asarray([0, 1, 0]), np.asarray(local_up_y)) > 0.9397 or np.dot(np.asarray([0, 0, 1]), np.asarray(local_up_z)) > 0.9397 or pos[2] < 0.3)
 
+  def get_objectives(self):
+    return self._objectives
+
   def _termination(self):
     position = self.robot.GetBasePosition()
     distance = math.sqrt(position[0]**2 + position[1]**2)
@@ -478,9 +441,6 @@ class BulletEnv(gym.Env):
     ])
     return reward
 
-  def get_objectives(self):
-    return self._objectives
-
   def _get_observation(self):
     self._observation = self.robot.GetObservation()
     return self._observation
@@ -493,6 +453,16 @@ class BulletEnv(gym.Env):
                                        size=observation.shape) *
                       self.robot.GetObservationUpperBound())
     return observation
+
+  def _transform_action_to_motor_command(self, action):
+    if self._leg_model_enabled:
+      for i, action_component in enumerate(action):
+        if not (-self._action_bound - ACTION_EPS <= action_component <=
+                self._action_bound + ACTION_EPS):
+          raise ValueError("{}th action {} out of bounds.".format(
+              i, action_component))
+      action = self.robot.ConvertFromLegModel(action)
+    return action
 
   if importlib_metadata.version('gym') < "0.9.6":
     _render = render
