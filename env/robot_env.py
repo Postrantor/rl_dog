@@ -22,12 +22,12 @@ class EnvRandomizer(EnvRandomizerBase):
   @brief 一个在每次重置时改变 gym 的随机器。
   """
 
-  def __init__(self, parameters_list):
-    self._base_mass_err = parameters_list['base_mass_error_range'] # -/+20%
-    self._leg_mass_err = parameters_list['leg_mass_error_range'] # -/+20%
-    self._batt_volt = parameters_list['battery_voltage_range'] # unit: volt
-    self._viscous_damping = parameters_list['motor_viscous_damping_range'] # N·m·s/rad (转矩/角速度)
-    self._leg_friction = parameters_list['leg_friction'] # 摩擦系数
+  def __init__(self, params_list):
+    self._base_mass_err = params_list['base_mass_error_range'] # -/+20%
+    self._leg_mass_err = params_list['leg_mass_error_range'] # -/+20%
+    self._batt_volt = params_list['battery_voltage_range'] # unit: volt
+    self._viscous_damping = params_list['motor_viscous_damping_range'] # N·m·s/rad (转矩/角速度)
+    self._leg_friction = params_list['leg_friction'] # 摩擦系数
 
   def randomize_env(self, robot):
     """
@@ -36,20 +36,17 @@ class EnvRandomizer(EnvRandomizerBase):
     @param: robot: 位于随机环境中的robot实例.
     """
     # 这种直接传入robot，然后设置的方式？不太好吧，感觉有些别扭
-    base_mass = robot.GetBaseMassFromURDF()
-    randomized_base_mass = uniform(
-        base_mass * (1.0 + self._base_mass_err[0]),
-        base_mass * (1.0 + self._base_mass_err[1]))
-    robot.SetBaseMass(randomized_base_mass)
+    body_mass_base = robot.GetBaseMassFromURDF()
+    body_mass = uniform(
+        body_mass_base * (1.0 + self._base_mass_err[0]),
+        body_mass_base * (1.0 + self._base_mass_err[1]))
+    robot.SetBaseMass(body_mass)
 
-    leg_masses = robot.GetLegMassesFromURDF()
-    leg_masses_lower = np.array(leg_masses) * (1.0 + self._leg_mass_err[0])
-    leg_masses_upper = np.array(leg_masses) * (1.0 + self._leg_mass_err[1])
-    leg_masses = [
-        np.random.uniform(leg_masses_lower[i], leg_masses_upper[i])
-        for i in range(len(leg_masses))
-    ]
-    robot.SetLegMasses(leg_masses)
+    leg_mass_base = robot.GetLegMassesFromURDF()
+    leg_mass_lower = np.array(leg_mass_base) * (1.0 + self._leg_mass_err[0])
+    leg_mass_upper = np.array(leg_mass_base) * (1.0 + self._leg_mass_err[1])
+    leg_mass = [uniform(leg_mass_lower[i], leg_mass_upper[i]) for i in range(len(leg_mass_base))]
+    robot.SetLegMasses(leg_mass)
 
     robot.SetBatteryVoltage(uniform(self._batt_volt[0], self._batt_volt[1]))
     robot.SetMotorViscousDamping(uniform(self._viscous_damping[0], self._viscous_damping[1]))
