@@ -20,24 +20,24 @@ from pybullet_envs.bullet.env_randomizer_base import EnvRandomizerBase
 
 # env randomizer range
 ## relative range.
-BASE_MASS_ERROR_RANGE = (-0.2, 0.2)  # -/+20%
-LEG_MASS_ERROR_RANGE = (-0.2, 0.2)  # -/+20%
+base_mass_error_range = (-0.2, 0.2)  # -/+20%
+leg_mass_error_range = (-0.2, 0.2)  # -/+20%
 ## absolute range
-BATTERY_VOLTAGE_RANGE = (24.8, 26.8)  # unit: volt
-MOTOR_VISCOUS_DAMPING_RANGE = (0, 0.1)  # N·m·s/rad (转矩/角速度)
-LEG_FRICTION = (0.8, 1.5)  # 无单位(无量纲)
+battery_voltage_range = (24.8, 26.8)  # unit: volt
+motor_viscous_damping_range = (0, 0.1)  # N·m·s/rad (转矩/角速度)
+leg_friction = (0.8, 1.5)  # 无单位(无量纲)
 
 
 class EnvRandomizer(EnvRandomizerBase):
   """
-  一个在每次重置时改变 gym env 的随机器。
+  @brief 一个在每次重置时改变 gym 的随机器。
   """
 
   def __init__(self,
-               base_mass_err_range=BASE_MASS_ERROR_RANGE,
-               leg_mass_err_range=LEG_MASS_ERROR_RANGE,
-               battery_voltage_range=BATTERY_VOLTAGE_RANGE,
-               motor_viscous_damping_range=MOTOR_VISCOUS_DAMPING_RANGE):
+               base_mass_err_range=base_mass_error_range,
+               leg_mass_err_range=leg_mass_error_range,
+               battery_voltage_range=battery_voltage_range,
+               motor_viscous_damping_range=motor_viscous_damping_range):
     self._base_mass_err_range = base_mass_err_range
     self._leg_mass_err_range = leg_mass_err_range
     self._battery_voltage_range = battery_voltage_range
@@ -66,32 +66,31 @@ class EnvRandomizer(EnvRandomizerBase):
     ]
     robot.SetLegMasses(randomized_leg_masses)
 
-    randomized_battery_voltage = random.uniform(BATTERY_VOLTAGE_RANGE[0],
-                                                BATTERY_VOLTAGE_RANGE[1])
+    randomized_battery_voltage = random.uniform(battery_voltage_range[0],
+                                                battery_voltage_range[1])
     robot.SetBatteryVoltage(randomized_battery_voltage)
 
-    randomized_motor_damping = random.uniform(MOTOR_VISCOUS_DAMPING_RANGE[0],
-                                              MOTOR_VISCOUS_DAMPING_RANGE[1])
+    randomized_motor_damping = random.uniform(motor_viscous_damping_range[0],
+                                              motor_viscous_damping_range[1])
     robot.SetMotorViscousDamping(randomized_motor_damping)
 
-    randomized_foot_friction = random.uniform(LEG_FRICTION[0], LEG_FRICTION[1])
+    randomized_foot_friction = random.uniform(leg_friction[0], leg_friction[1])
     robot.SetFootFriction(randomized_foot_friction)
 
 
 from env.robot_model import Robot
 
 # robot range
-NUM_SUBSTEPS = 5
-NUM_MOTORS = 12
-MOTOR_ANGLE_OBSERVATION_INDEX = 0
-MOTOR_VELOCITY_OBSERVATION_INDEX = MOTOR_ANGLE_OBSERVATION_INDEX + NUM_MOTORS
-MOTOR_TORQUE_OBSERVATION_INDEX = MOTOR_VELOCITY_OBSERVATION_INDEX + NUM_MOTORS
-BASE_ORIENTATION_OBSERVATION_INDEX = MOTOR_TORQUE_OBSERVATION_INDEX + NUM_MOTORS
-ACTION_EPS = 0.02
-OBSERVATION_EPS = 0.02
-RENDER_HEIGHT = 720
-RENDER_WIDTH = 960
-
+num_substeps = 5
+num_motors = 12
+motor_angle_observation_index = 0
+motor_velocity_observation_index = motor_angle_observation_index + num_motors
+motor_torque_observation_index = motor_velocity_observation_index + num_motors
+base_orientation_observation_index = motor_torque_observation_index + num_motors
+action_eps = 0.02
+observation_eps = 0.02
+render_height = 720
+render_width = 960
 
 class BulletEnv(gym.Env):
   """
@@ -113,7 +112,7 @@ class BulletEnv(gym.Env):
       self,
       parameters_list,
       urdf_root=pybullet_data.getDataPath(),
-      env_randomizer=EnvRandomizer(),  # 用于在reset()期间随机化物理属性的EnvRandomizer。
+      env_randomizer=EnvRandomizer(),
   ):
 
     self._urdf_root = urdf_root
@@ -161,9 +160,9 @@ class BulletEnv(gym.Env):
 
     # PD control needs smaller time step for stability.
     if pd_control_enabled or accurate_motor_model_enabled:
-      self._time_step /= NUM_SUBSTEPS
-      self._num_bullet_solver_iterations /= NUM_SUBSTEPS
-      self._action_repeat *= NUM_SUBSTEPS
+      self._time_step /= num_substeps
+      self._num_bullet_solver_iterations /= num_substeps
+      self._action_repeat *= num_substeps
 
     #
     if self._is_render:
@@ -177,8 +176,8 @@ class BulletEnv(gym.Env):
 
     #
     observation_high = (self.robot.GetObservationUpperBound() +
-                        OBSERVATION_EPS)
-    observation_low = (self.robot.GetObservationLowerBound() - OBSERVATION_EPS)
+                        observation_eps)
+    observation_low = (self.robot.GetObservationLowerBound() - observation_eps)
     action_dim = 12
     action_high = np.array([self._action_bound] * action_dim)
     # 这两个参数用于初始化神经网络，应该拿出去？
@@ -297,12 +296,12 @@ class BulletEnv(gym.Env):
         upAxisIndex=2)
     proj_matrix = self._pybullet_client.computeProjectionMatrixFOV(
         fov=60,
-        aspect=float(RENDER_WIDTH) / RENDER_HEIGHT,
+        aspect=float(render_width) / render_height,
         nearVal=0.1,
         farVal=100.0)
     (_, _, px, _, _) = self._pybullet_client.getCameraImage(
-        width=RENDER_WIDTH,
-        height=RENDER_HEIGHT,
+        width=render_width,
+        height=render_height,
         viewMatrix=view_matrix,
         projectionMatrix=proj_matrix,
         renderer=pybullet.ER_BULLET_HARDWARE_OPENGL)
@@ -317,8 +316,8 @@ class BulletEnv(gym.Env):
       A numpy array of motor angles.
     """
     return np.array(self._observation[
-        MOTOR_ANGLE_OBSERVATION_INDEX:MOTOR_ANGLE_OBSERVATION_INDEX +
-        NUM_MOTORS])
+        motor_angle_observation_index:motor_angle_observation_index +
+        num_motors])
 
   def get_mdoger7_motor_velocities(self):
     """Get the mdoger7's motor velocities.
@@ -327,8 +326,8 @@ class BulletEnv(gym.Env):
       A numpy array of motor velocities.
     """
     return np.array(self._observation[
-        MOTOR_VELOCITY_OBSERVATION_INDEX:MOTOR_VELOCITY_OBSERVATION_INDEX +
-        NUM_MOTORS])
+        motor_velocity_observation_index:motor_velocity_observation_index +
+        num_motors])
 
   def get_mdoger7_motor_torques(self):
     """Get the mdoger7's motor torques.
@@ -337,8 +336,8 @@ class BulletEnv(gym.Env):
       A numpy array of motor torques.
     """
     return np.array(self._observation[
-        MOTOR_TORQUE_OBSERVATION_INDEX:MOTOR_TORQUE_OBSERVATION_INDEX +
-        NUM_MOTORS])
+        motor_torque_observation_index:motor_torque_observation_index +
+        num_motors])
 
   def get_mdoger7_base_orientation(self):
     """Get the mdoger7's base orientation, represented by a quaternion.
@@ -346,7 +345,7 @@ class BulletEnv(gym.Env):
     Returns:
       A numpy array of mdoger7's orientation.
     """
-    return np.array(self._observation[BASE_ORIENTATION_OBSERVATION_INDEX:])
+    return np.array(self._observation[base_orientation_observation_index:])
 
   def is_fallen(self):
     """Decide whether the mdoger7 has fallen.
@@ -457,8 +456,8 @@ class BulletEnv(gym.Env):
   def _transform_action_to_motor_command(self, action):
     if self._leg_model_enabled:
       for i, action_component in enumerate(action):
-        if not (-self._action_bound - ACTION_EPS <= action_component <=
-                self._action_bound + ACTION_EPS):
+        if not (-self._action_bound - action_eps <= action_component <=
+                self._action_bound + action_eps):
           raise ValueError("{}th action {} out of bounds.".format(
               i, action_component))
       action = self.robot.ConvertFromLegModel(action)
