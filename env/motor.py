@@ -21,13 +21,11 @@ class MotorModel():
     self._voltage = parameters_list['motor_voltage'] # 电机电压为16.0
     self._torque_constant = parameters_list['motor_torque_constant'] # 电机转矩常数为0.0954
     self._viscous_damping = parameters_list['motor_viscous_damping'] # 电机粘性阻尼为0
-    self._current_table = [0, 10, 20, 30, 40, 50, 60]
-    self._torque_table = [0, 1, 1.9, 2.45, 3.0, 3.25, 3.5]
-
     self._voltage_clipping = parameters_list['voltage_clipping'] # 电压限制为50V
     self._observed_torque_limit = parameters_list['observed_torque_limit'] # 观测到的力矩限制为5.7
-
     self._motor_speed_limit = parameters_list['motor_speed_limit'] # 电机速度限制
+    self._current_table = [0, 10, 20, 30, 40, 50, 60]
+    self._torque_table = [0, 1, 1.9, 2.45, 3.0, 3.25, 3.5]
 
   def set_voltage(self, voltage):
     self._voltage = voltage

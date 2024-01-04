@@ -10,3 +10,4 @@ def load_parameters(file_path):
     yaml = YAML(typ='safe')  # default, if not specfied, is 'rt' (round-trip)
     parameters = yaml.load(f)
   return parameters
+

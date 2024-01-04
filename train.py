@@ -10,7 +10,6 @@ from utils.load_yaml import load_parameters
 
 
 def algorithm_rl(parameter_list):
-
   # 创建BulletEnv环境对象及Agent对象
   env = e.BulletEnv(parameter_list['environment'])
   agent = SAC2Agent(env, parameter_list['sac'])
@@ -20,9 +19,8 @@ def algorithm_rl(parameter_list):
   agent.save_policy(parameter_list['training']['final_policy'])
 
 
-def main():
-  algorithm_rl(load_parameters('config/parameters.yaml'))
-
-
 if __name__ == "__main__":
-  main()
+  algorithm_rl(load_parameters('config/parameters.yaml'))
+  # param = load_parameters('config/parameters.yaml')
+  # output = param['environment']['randomizer']['base_mass_error_range']
+  # print('path: {0}; path: {1}'.format(output[0], output[1]))

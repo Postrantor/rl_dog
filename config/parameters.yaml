@@ -17,6 +17,9 @@ training:
 
 # The gym environment for the mdoger7.
 environment:
+  urdf_env:
+    - "../mdoger7/urdf/mdoger7.urdf"
+    - "../env/pybullet_data"
   action_repeat: 1 # 运动重复的次数
   distance_weight: 10.0 # 距离项在奖励中的权重
   energy_weight: 0.5 # 能量项在奖励中的权重
@@ -33,6 +36,14 @@ environment:
   on_rack: False # 是否将model放在架子上。这仅用于调试行走步态。在此模式下，model的基座悬挂在半空中，以便更清晰地可视化其步态。
   render: True # 是否渲染仿真
   # kd_for_pd_controllers: 0.3 # 用于马达的PD控制器的kd值
+  randomizer:
+    ## relative range.
+    base_mass_error_range: [-0.2, 0.2] # -/+20%
+    leg_mass_error_range: [-0.2, 0.2] # -/+20%
+    ## absolute range
+    battery_voltage_range: [24.8, 26.8] # unit: volt
+    motor_viscous_damping_range: [0, 0.1] # N·m·s/rad (转矩/角速度)
+    leg_friction: [0.8, 1.5] # 无单位(无量纲)
 
   # Robot
   robot:

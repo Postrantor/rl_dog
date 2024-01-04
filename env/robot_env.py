@@ -6,7 +6,7 @@ This file implements the gym environment of mdoger7.
 import os
 import math
 import time
-import random
+from random import uniform
 import importlib_metadata
 # virtual
 import gym
@@ -15,67 +15,45 @@ from gym.utils import seeding
 import numpy as np
 import pybullet
 from pybullet_utils import bullet_client as bc
-import pybullet_data
 from pybullet_envs.bullet.env_randomizer_base import EnvRandomizerBase
-
-# env randomizer range
-## relative range.
-base_mass_error_range = (-0.2, 0.2)  # -/+20%
-leg_mass_error_range = (-0.2, 0.2)  # -/+20%
-## absolute range
-battery_voltage_range = (24.8, 26.8)  # unit: volt
-motor_viscous_damping_range = (0, 0.1)  # N·m·s/rad (转矩/角速度)
-leg_friction = (0.8, 1.5)  # 无单位(无量纲)
-
 
 class EnvRandomizer(EnvRandomizerBase):
   """
   @brief 一个在每次重置时改变 gym 的随机器。
   """
 
-  def __init__(self,
-               base_mass_err_range=base_mass_error_range,
-               leg_mass_err_range=leg_mass_error_range,
-               battery_voltage_range=battery_voltage_range,
-               motor_viscous_damping_range=motor_viscous_damping_range):
-    self._base_mass_err_range = base_mass_err_range
-    self._leg_mass_err_range = leg_mass_err_range
-    self._battery_voltage_range = battery_voltage_range
-    self._motor_viscous_damping_range = motor_viscous_damping_range
+  def __init__(self, parameters_list):
+    self._base_mass_err = parameters_list['base_mass_error_range'] # -/+20%
+    self._leg_mass_err = parameters_list['leg_mass_error_range'] # -/+20%
+    self._batt_volt = parameters_list['battery_voltage_range'] # unit: volt
+    self._viscous_damping = parameters_list['motor_viscous_damping_range'] # N·m·s/rad (转矩/角速度)
+    self._leg_friction = parameters_list['leg_friction'] # 摩擦系数
 
   def randomize_env(self, robot):
     """
     @brief: 随机改变模型的各种物理属性
-          它在每次环境重置(`reset()`)时随机化基座、腿部的质量/惯性、足部的摩擦系数、电池电压和电机阻尼.
-    @param: robot: 位于robot_gym_env环境中的robot实例.
+          它在每次环境重置时随机化基座、腿部的质量/惯性、足部的摩擦系数、电池电压和电机阻尼.
+    @param: robot: 位于随机环境中的robot实例.
     """
+    # 这种直接传入robot，然后设置的方式？不太好吧，感觉有些别扭
     base_mass = robot.GetBaseMassFromURDF()
-    randomized_base_mass = random.uniform(
-        base_mass * (1.0 + self._base_mass_err_range[0]),
-        base_mass * (1.0 + self._base_mass_err_range[1]))
+    randomized_base_mass = uniform(
+        base_mass * (1.0 + self._base_mass_err[0]),
+        base_mass * (1.0 + self._base_mass_err[1]))
     robot.SetBaseMass(randomized_base_mass)
 
     leg_masses = robot.GetLegMassesFromURDF()
-    leg_masses_lower_bound = np.array(leg_masses) * (
-        1.0 + self._leg_mass_err_range[0])
-    leg_masses_upper_bound = np.array(leg_masses) * (
-        1.0 + self._leg_mass_err_range[1])
-    randomized_leg_masses = [
-        np.random.uniform(leg_masses_lower_bound[i], leg_masses_upper_bound[i])
+    leg_masses_lower = np.array(leg_masses) * (1.0 + self._leg_mass_err[0])
+    leg_masses_upper = np.array(leg_masses) * (1.0 + self._leg_mass_err[1])
+    leg_masses = [
+        np.random.uniform(leg_masses_lower[i], leg_masses_upper[i])
         for i in range(len(leg_masses))
     ]
-    robot.SetLegMasses(randomized_leg_masses)
+    robot.SetLegMasses(leg_masses)
 
-    randomized_battery_voltage = random.uniform(battery_voltage_range[0],
-                                                battery_voltage_range[1])
-    robot.SetBatteryVoltage(randomized_battery_voltage)
-
-    randomized_motor_damping = random.uniform(motor_viscous_damping_range[0],
-                                              motor_viscous_damping_range[1])
-    robot.SetMotorViscousDamping(randomized_motor_damping)
-
-    randomized_foot_friction = random.uniform(leg_friction[0], leg_friction[1])
-    robot.SetFootFriction(randomized_foot_friction)
+    robot.SetBatteryVoltage(uniform(self._batt_volt[0], self._batt_volt[1]))
+    robot.SetMotorViscousDamping(uniform(self._viscous_damping[0], self._viscous_damping[1]))
+    robot.SetFootFriction(uniform(self._leg_friction[0], self._leg_friction[1]))
 
 
 from env.robot_model import Robot
@@ -108,15 +86,9 @@ class BulletEnv(gym.Env):
       "video.frames_per_second": 50
   }
 
-  def __init__(
-      self,
-      parameters_list,
-      urdf_root=pybullet_data.getDataPath(),
-      env_randomizer=EnvRandomizer(),
-  ):
-
-    self._urdf_root = urdf_root
-    self._env_randomizer = env_randomizer
+  def __init__(self, parameters_list):
+    self._urdf_root = parameters_list['urdf_env']
+    self._env_randomizer = EnvRandomizer(parameters_list['randomizer'])
 
     self._time_step = 0.01
     self._cam_dist = 1.0
@@ -202,7 +174,7 @@ class BulletEnv(gym.Env):
       self._pybullet_client.setPhysicsEngineParameter(
           numSolverIterations=int(self._num_bullet_solver_iterations))
       self._pybullet_client.setTimeStep(self._time_step)
-      plane = self._pybullet_client.loadURDF("%s/plane.urdf" % self._urdf_root)
+      plane = self._pybullet_client.loadURDF("%s/plane.urdf" % self._urdf_root[1])
       self._pybullet_client.changeVisualShape(plane,
                                               -1,
                                               rgbaColor=[1, 1, 1, 0.9])
