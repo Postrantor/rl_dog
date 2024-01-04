@@ -62,6 +62,7 @@ motor_angle_observation_index = 0
 motor_velocity_observation_index = motor_angle_observation_index + num_motors
 motor_torque_observation_index = motor_velocity_observation_index + num_motors
 base_orientation_observation_index = motor_torque_observation_index + num_motors
+
 action_eps = 0.02
 observation_eps = 0.02
 render_height = 720
@@ -83,9 +84,12 @@ class BulletEnv(gym.Env):
       "video.frames_per_second": 50
   }
 
-  def __init__(self, parameters_list):
-    self._urdf_root = parameters_list['urdf_env']
-    self._env_randomizer = EnvRandomizer(parameters_list['randomizer'])
+  def __init__(self, params_list):
+    self.params_list = params_list
+
+    self._urdf_root = params_list['urdf_env']
+    self._env_randomizer = EnvRandomizer(params_list['randomizer'])
+    self._is_render = params_list['render']  # 是否渲染仿真
 
     self._time_step = 0.01
     self._cam_dist = 1.0
@@ -93,42 +97,30 @@ class BulletEnv(gym.Env):
     self._cam_pitch = -30
     self._env_step_counter = 0
     self._last_frame_time = 0.0
-
     self._num_bullet_solver_iterations = 300
-    self._observation = []
-    self._last_base_position = [0, 0, 0]
     self._action_bound = 1
+    self._last_base_position = [0, 0, 0]
+    self._observation = []
 
-    self.parameters_list = parameters_list
+    self._action_repeat = params_list['action_repeat']  # 运动重复的次数
+    self._distance_weight = params_list['distance_weight']  # 距离项在奖励中的权重
+    self._energy_weight = params_list['energy_weight']  # 能量项在奖励中的权重
+    self._drift_weight = params_list['drift_weight']  # 侧向漂移项在奖励中的权重
+    self._shake_weight = params_list['shake_weight']  # 垂直摇晃项在奖励中的权重
+    self._distance_limit = params_list['distance_limit']  # 终止episode的最大距离
+    self._observation_noise_stdev = params_list['observation_noise_stdev']  # 观察噪声的标准差
+    self._leg_model_enabled = params_list['leg_model_enabled']  # 是否使用腿部马达重新参数化动作空间
+    self._torque_control_enabled = params_list['torque_control_enabled']  # 是否使用扭矩控制，否则使用姿态控制
 
-    self._is_render = parameters_list['render']  # 是否渲染仿真
-    self._action_repeat = parameters_list['action_repeat']  # 运动重复的次数
-    self._distance_weight = parameters_list['distance_weight']  # 距离项在奖励中的权重
-    self._energy_weight = parameters_list['energy_weight']  # 能量项在奖励中的权重
-    self._drift_weight = parameters_list['drift_weight']  # 侧向漂移项在奖励中的权重
-    self._shake_weight = parameters_list['shake_weight']  # 垂直摇晃项在奖励中的权重
-    self._distance_limit = parameters_list['distance_limit']  # 终止episode的最大距离
-    self._observation_noise_stdev = parameters_list[
-        'observation_noise_stdev']  # 观察噪声的标准差
-    self._leg_model_enabled = parameters_list[
-        'leg_model_enabled']  # 是否使用腿部马达重新参数化动作空间
-    self._torque_control_enabled = parameters_list[
-        'torque_control_enabled']  # 是否使用扭矩控制，否则使用姿态控制
-
+    # 是否在重置时清除仿真并加载所有内容。如果设置为false，则重置只是将model放回起始位置并将其姿势设为初始配置。
     self._hard_reset = True
-    hard_reset = parameters_list[
-        'hard_reset']  # 是否在重置时清除仿真并加载所有内容。如果设置为false，则重置只是将model放回起始位置并将其姿势设为初始配置。
-    pd_control_enabled = parameters_list[
-        'pd_control_enabled']  # 是否为每个马达启用PD控制器
+    hard_reset = params_list['hard_reset']
 
-    accurate_motor_model_enabled = parameters_list[
-        'accurate_motor_model_enabled']  # 是否使用准确的直流电机模型
-    self._pd_control_enabled = parameters_list['pd_control_enabled']
-    self._accurate_motor_model_enabled = parameters_list[
-        'accurate_motor_model_enabled']
+    self._pd_control_enabled = params_list['pd_control_enabled'] # 是否为每个马达启用PD控制器
+    self._accurate_motor_model_enabled = params_list['accurate_motor_model_enabled'] # 是否使用准确的直流电机模型
 
     # PD control needs smaller time step for stability.
-    if pd_control_enabled or accurate_motor_model_enabled:
+    if self._pd_control_enabled or self._accurate_motor_model_enabled:
       self._time_step /= num_substeps
       self._num_bullet_solver_iterations /= num_substeps
       self._action_repeat *= num_substeps
@@ -182,7 +174,7 @@ class BulletEnv(gym.Env):
 
       robot_urdf_path = os.path.join(os.path.dirname(__file__),
                                      '/../mdoger7/urdf/')
-      self.robot = Robot(self.parameters_list['robot'],
+      self.robot = Robot(self.params_list['robot'],
                          pybullet_client=self._pybullet_client,
                          urdf_root=robot_urdf_path)
     else:
