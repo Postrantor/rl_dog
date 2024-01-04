@@ -94,14 +94,14 @@ render_width = 960
 
 class BulletEnv(gym.Env):
   """
-  The gym environment for the mdoger7.
+  @brief The gym environment for the robot.
 
-  It simulates the locomotion of a mdoger7, a quadruped robot. The state space
+  It simulates the locomotion of a robot, a quadruped robot. The state space
   include the angles, velocities and torques for all the motors and the action
   space is the desired motor angle for each motor. The reward function is based
-  on how far the mdoger7 walks in 1000 steps and penalizes the energy
+  on how far the robot walks in 1000 steps and penalizes the energy
   expenditure.
-  它模拟四足机器人 mdoger7 的运动。 状态空间包括所有电机和动作的角度、速度和扭矩space 是每个电机所需的电机角度。 奖励函数基于mdoger7 在 1000 步中行走多远并惩罚能量支出。
+  > 它模拟四足机器人的运动。状态空间包括所有电机和动作的角度、速度和扭矩space 是每个电机所需的电机角度。奖励函数基于 mdoger7 在 1000 步中行走多远并惩罚能量支出。
   """
   metadata = {
       "render.modes": ["human", "rgb_array"],
