@@ -47,6 +47,9 @@ environment:
 
   # Robot
   robot:
+    urdf_env:
+      - "../mdoger7/urdf/mdoger7.urdf"
+      - "../env/pybullet_data"
     # current_table = [0, 10, 20, 30, 40, 50, 60]
     # torque_table = [0, 1, 1.9, 2.45, 3.0, 3.25, 3.5]
     time_step: 0.01
@@ -54,10 +57,10 @@ environment:
     motor_velocity_limit: .inf #np.inf # 每个马达的速度限制
     pd_control_enabled: True
     accurate_motor_model_enabled: False
-    motor_kp: 2.0 # 准确电机模型的比例增益
-    motor_kd: 0.03 # 准确电机模型的微分增益
     motor_overheat_protection: False
     on_rack: False
+    num_motors: 12
+    num_legs: 4
     kd_for_pd_controllers: 0.3
 
     motor:
@@ -66,9 +69,8 @@ environment:
       kd: 0.03 # 准确电机模型的微分增益
       voltage_clipping: 50 # 电压限制为50V
       observed_torque_limit: 5.7 # 观测到的力矩限制为5.7
-      # motor_speed_limit # 电机速度限制通过计算得出
       motor_resistance: 0.186 # 电机电阻为0.186
       motor_voltage: 16.0 # 电机电压为16.0
       motor_torque_constant: 0.0954 # 电机转矩常数为0.0954
       motor_viscous_damping: 0 # 电机粘性阻尼为0
-      motor_speed_limit: 500
+      motor_speed_limit: 500 # 电机速度限制通过计算得出

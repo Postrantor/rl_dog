@@ -87,9 +87,14 @@ class BulletEnv(gym.Env):
   def __init__(self, params_list):
     self.params_list = params_list
 
+    self._is_render = params_list['render']  # 是否渲染仿真
+    if self._is_render:
+      self._bullet_client = bc.BulletClient(connection_mode=pybullet.GUI)
+    else:
+      self._bullet_client = bc.BulletClient()
+
     self._urdf_root = params_list['urdf_env']
     self._env_randomizer = EnvRandomizer(params_list['randomizer'])
-    self._is_render = params_list['render']  # 是否渲染仿真
 
     self._time_step = 0.01
     self._cam_dist = 1.0
@@ -118,7 +123,6 @@ class BulletEnv(gym.Env):
 
     self._pd_control_enabled = params_list['pd_control_enabled'] # 是否为每个马达启用PD控制器
     self._accurate_motor_model_enabled = params_list['accurate_motor_model_enabled'] # 是否使用准确的直流电机模型
-
     # PD control needs smaller time step for stability.
     if self._pd_control_enabled or self._accurate_motor_model_enabled:
       self._time_step /= num_substeps
@@ -126,30 +130,23 @@ class BulletEnv(gym.Env):
       self._action_repeat *= num_substeps
 
     #
-    if self._is_render:
-      self._pybullet_client = bc.BulletClient(connection_mode=pybullet.GUI)
-    else:
-      self._pybullet_client = bc.BulletClient()
-
-    #
     self.seed()
     self.reset()
 
     #
-    observation_high = (self.robot.GetObservationUpperBound() +
-                        observation_eps)
+    observation_high = (self.robot.GetObservationUpperBound() + observation_eps)
     observation_low = (self.robot.GetObservationLowerBound() - observation_eps)
     action_dim = 12
     action_high = np.array([self._action_bound] * action_dim)
+
     # 这两个参数用于初始化神经网络，应该拿出去？
     self.action_space = spaces.Box(-action_high, action_high, dtype=np.float32)
-    self.observation_space = spaces.Box(observation_low,
-                                        observation_high,
-                                        dtype=np.float32)
+    self.observation_space = spaces.Box(observation_low, observation_high, dtype=np.float32)
 
     #
     self.viewer = None
-    self._hard_reset = hard_reset  # This assignment need to be after reset()
+    # This assignment need to be after reset()，是必须要reset()一次？
+    self._hard_reset = hard_reset
 
   def set_env_randomizer(self, env_randomizer):
     self._env_randomizer = env_randomizer
@@ -159,24 +156,16 @@ class BulletEnv(gym.Env):
 
   def reset(self):
     if self._hard_reset:
-      self._pybullet_client.resetSimulation()
-      self._pybullet_client.setPhysicsEngineParameter(
-          numSolverIterations=int(self._num_bullet_solver_iterations))
-      self._pybullet_client.setTimeStep(self._time_step)
-      plane = self._pybullet_client.loadURDF("%s/plane.urdf" % self._urdf_root[1])
-      self._pybullet_client.changeVisualShape(plane,
-                                              -1,
-                                              rgbaColor=[1, 1, 1, 0.9])
-      self._pybullet_client.configureDebugVisualizer(
-          self._pybullet_client.COV_ENABLE_PLANAR_REFLECTION, 0)
-      self._pybullet_client.setGravity(0, 0, -10)
+      self._bullet_client.resetSimulation()
+      self._bullet_client.setPhysicsEngineParameter(numSolverIterations=int(self._num_bullet_solver_iterations))
+      self._bullet_client.setTimeStep(self._time_step)
+      plane = self._bullet_client.loadURDF("%s/plane.urdf" % self._urdf_root[1])
+      self._bullet_client.changeVisualShape(plane, -1, rgbaColor=[1, 1, 1, 0.9])
+      self._bullet_client.configureDebugVisualizer(self._bullet_client.COV_ENABLE_PLANAR_REFLECTION, 0)
+      self._bullet_client.setGravity(0, 0, -10)
       acc_motor = self._accurate_motor_model_enabled
 
-      robot_urdf_path = os.path.join(os.path.dirname(__file__),
-                                     '/../mdoger7/urdf/')
-      self.robot = Robot(self.params_list['robot'],
-                         pybullet_client=self._pybullet_client,
-                         urdf_root=robot_urdf_path)
+      self.robot = Robot(self.params_list['robot'], bullet_cli=self._bullet_client)
     else:
       self.robot.Reset(reload_urdf=False)
 
@@ -186,7 +175,7 @@ class BulletEnv(gym.Env):
     self._env_step_counter = 0
     self._last_base_position = [0, 0, 0]
     self._objectives = []
-    self._pybullet_client.resetDebugVisualizerCamera(self._cam_dist,
+    self._bullet_client.resetDebugVisualizerCamera(self._cam_dist,
                                                      self._cam_yaw,
                                                      self._cam_pitch,
                                                      [0, 0, 0])
@@ -194,7 +183,7 @@ class BulletEnv(gym.Env):
       for _ in range(100):
         if self._pd_control_enabled or self._accurate_motor_model_enabled:
           self.robot.ApplyAction([math.pi] * 12)
-        self._pybullet_client.stepSimulation()
+        self._bullet_client.stepSimulation()
     return self._noisy_observation()
 
   def seed(self, seed=None):
@@ -227,17 +216,17 @@ class BulletEnv(gym.Env):
         time.sleep(time_to_sleep)
 
       base_pos = self.robot.GetBasePosition()
-      camInfo = self._pybullet_client.getDebugVisualizerCamera()
+      camInfo = self._bullet_client.getDebugVisualizerCamera()
       distance = camInfo[10]
       yaw = camInfo[8]
       pitch = camInfo[9]
-      self._pybullet_client.resetDebugVisualizerCamera(distance, yaw, pitch,
+      self._bullet_client.resetDebugVisualizerCamera(distance, yaw, pitch,
                                                        base_pos)
 
     action = self._transform_action_to_motor_command(action)
     for _ in range(self._action_repeat):
       self.robot.ApplyAction(action)
-      self._pybullet_client.stepSimulation()
+      self._bullet_client.stepSimulation()
 
     self._env_step_counter += 1
     reward = self._reward()
@@ -248,19 +237,19 @@ class BulletEnv(gym.Env):
     if mode != "rgb_array":
       return np.array([])
     base_pos = self.robot.GetBasePosition()
-    view_matrix = self._pybullet_client.computeViewMatrixFromYawPitchRoll(
+    view_matrix = self._bullet_client.computeViewMatrixFromYawPitchRoll(
         cameraTargetPosition=base_pos,
         distance=self._cam_dist,
         yaw=self._cam_yaw,
         pitch=self._cam_pitch,
         roll=0,
         upAxisIndex=2)
-    proj_matrix = self._pybullet_client.computeProjectionMatrixFOV(
+    proj_matrix = self._bullet_client.computeProjectionMatrixFOV(
         fov=60,
         aspect=float(render_width) / render_height,
         nearVal=0.1,
         farVal=100.0)
-    (_, _, px, _, _) = self._pybullet_client.getCameraImage(
+    (_, _, px, _, _) = self._bullet_client.getCameraImage(
         width=render_width,
         height=render_height,
         viewMatrix=view_matrix,
@@ -320,7 +309,7 @@ class BulletEnv(gym.Env):
     """
     orientation = self.robot.GetBaseOrientation()
     position = self.robot.GetBasePosition()
-    rot_mat = self._pybullet_client.getMatrixFromQuaternion(orientation)
+    rot_mat = self._bullet_client.getMatrixFromQuaternion(orientation)
     # print("rot_mat:", rot_mat)
     # print("Type of rot_mat:", type(rot_mat))
     # local_up_x =  rot_mat[0:3]
@@ -348,7 +337,7 @@ class BulletEnv(gym.Env):
 
   def _reward(self):
     orientation = self.robot.GetBaseOrientation()
-    rot_mat = self._pybullet_client.getMatrixFromQuaternion(orientation)
+    rot_mat = self._bullet_client.getMatrixFromQuaternion(orientation)
     local_up_x = rot_mat[0:3]
     local_up_y = rot_mat[3:6]
     local_up_z = rot_mat[6:]
