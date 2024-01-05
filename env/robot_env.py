@@ -36,21 +36,21 @@ class EnvRandomizer(EnvRandomizerBase):
     @param: robot: 位于随机环境中的robot实例.
     """
     # 这种直接传入robot，然后设置的方式？不太好吧，感觉有些别扭
-    body_mass_base = robot.GetBaseMassFromURDF()
+    body_mass_base = robot.get_base_mass_from_urdf()
     body_mass = uniform(
         body_mass_base * (1.0 + self._base_mass_err[0]),
         body_mass_base * (1.0 + self._base_mass_err[1]))
-    robot.SetBaseMass(body_mass)
+    robot.set_base_mass(body_mass)
 
-    leg_mass_base = robot.GetLegMassesFromURDF()
+    leg_mass_base = robot.get_leg_masses_from_urdf()
     leg_mass_lower = np.array(leg_mass_base) * (1.0 + self._leg_mass_err[0])
     leg_mass_upper = np.array(leg_mass_base) * (1.0 + self._leg_mass_err[1])
     leg_mass = [uniform(leg_mass_lower[i], leg_mass_upper[i]) for i in range(len(leg_mass_base))]
-    robot.SetLegMasses(leg_mass)
+    robot.set_leg_masses(leg_mass)
 
-    robot.SetBatteryVoltage(uniform(self._batt_volt[0], self._batt_volt[1]))
-    robot.SetMotorViscousDamping(uniform(self._viscous_damping[0], self._viscous_damping[1]))
-    robot.SetFootFriction(uniform(self._leg_friction[0], self._leg_friction[1]))
+    robot.set_battery_voltage(uniform(self._batt_volt[0], self._batt_volt[1]))
+    robot.set_motor_viscous_damping(uniform(self._viscous_damping[0], self._viscous_damping[1]))
+    robot.set_foot_friction(uniform(self._leg_friction[0], self._leg_friction[1]))
 
 
 from env.robot_model import Robot
@@ -68,7 +68,7 @@ observation_eps = 0.02
 render_height = 720
 render_width = 960
 
-class BulletEnv(gym.Env):
+class BulletEnv(gym.Env, Robot):
   """
   @brief The gym environment for the robot.
 
@@ -134,8 +134,8 @@ class BulletEnv(gym.Env):
     self.reset()
 
     #
-    observation_high = (self.robot.GetObservationUpperBound() + observation_eps)
-    observation_low = (self.robot.GetObservationLowerBound() - observation_eps)
+    observation_high = (self.robot.get_observation_upper_bound() + observation_eps)
+    observation_low = (self.robot.get_observation_lower_bound() - observation_eps)
     action_dim = 12
     action_high = np.array([self._action_bound] * action_dim)
 
@@ -182,7 +182,7 @@ class BulletEnv(gym.Env):
     if not self._torque_control_enabled:
       for _ in range(100):
         if self._pd_control_enabled or self._accurate_motor_model_enabled:
-          self.robot.ApplyAction([math.pi] * 12)
+          self.robot.apply_action([math.pi] * 12)
         self._bullet_client.stepSimulation()
     return self._noisy_observation()
 
@@ -215,7 +215,7 @@ class BulletEnv(gym.Env):
       if time_to_sleep > 0:
         time.sleep(time_to_sleep)
 
-      base_pos = self.robot.GetBasePosition()
+      base_pos = self.robot.get_base_position()
       camInfo = self._bullet_client.getDebugVisualizerCamera()
       distance = camInfo[10]
       yaw = camInfo[8]
@@ -225,7 +225,7 @@ class BulletEnv(gym.Env):
 
     action = self._transform_action_to_motor_command(action)
     for _ in range(self._action_repeat):
-      self.robot.ApplyAction(action)
+      self.robot.apply_action(action)
       self._bullet_client.stepSimulation()
 
     self._env_step_counter += 1
@@ -236,7 +236,7 @@ class BulletEnv(gym.Env):
   def render(self, mode="rgb_array", close=False):
     if mode != "rgb_array":
       return np.array([])
-    base_pos = self.robot.GetBasePosition()
+    base_pos = self.robot.get_base_position()
     view_matrix = self._bullet_client.computeViewMatrixFromYawPitchRoll(
         cameraTargetPosition=base_pos,
         distance=self._cam_dist,
@@ -307,8 +307,8 @@ class BulletEnv(gym.Env):
     Returns:
       Boolean value that indicates whether the mdoger7 has fallen.
     """
-    orientation = self.robot.GetBaseOrientation()
-    position = self.robot.GetBasePosition()
+    orientation = self.robot.get_base_orientation()
+    position = self.robot.get_base_position()
     rot_mat = self._bullet_client.getMatrixFromQuaternion(orientation)
     # print("rot_mat:", rot_mat)
     # print("Type of rot_mat:", type(rot_mat))
@@ -329,25 +329,25 @@ class BulletEnv(gym.Env):
     return self._objectives
 
   def _termination(self):
-    position = self.robot.GetBasePosition()
+    position = self.robot.get_base_position()
     distance = math.sqrt(position[0]**2 + position[1]**2)
     condition = self.is_fallen() or (distance > self._distance_limit) or (
-        self.robot.CheckJointContact() > 0)
+        self.robot.check_joint_contact() > 0)
     return condition
 
   def _reward(self):
-    orientation = self.robot.GetBaseOrientation()
+    orientation = self.robot.get_base_orientation()
     rot_mat = self._bullet_client.getMatrixFromQuaternion(orientation)
     local_up_x = rot_mat[0:3]
     local_up_y = rot_mat[3:6]
     local_up_z = rot_mat[6:]
     roll = math.atan2(rot_mat[7], rot_mat[8])
     # theta = - (roll **2)
-    current_base_position = self.robot.GetBasePosition()
+    current_base_position = self.robot.get_base_position()
     forward_reward = current_base_position[0] - self._last_base_position[0]
     drift_reward = -abs(current_base_position[1])
     height_reward = -(current_base_position[2] - 0.35)**2
-    xy_velocity, yaw_rate = self.robot.GetBaseVelocity()
+    xy_velocity, yaw_rate = self.robot.get_base_velocity()
     target_xy_velocity = [
         5, 5
     ]  # Define these values as per your task requirements
@@ -376,8 +376,8 @@ class BulletEnv(gym.Env):
     self._last_base_position = current_base_position
 
     energy_reward = np.abs(
-        np.dot(self.robot.GetMotorTorques(),
-               self.robot.GetMotorVelocities())) * self._time_step
+        np.dot(self.robot.get_motor_torques(),
+               self.robot.get_motor_velocities())) * self._time_step
     reward = (self._distance_weight * forward_reward -
               self._energy_weight * energy_reward +
               self._drift_weight * drift_reward +
@@ -391,7 +391,7 @@ class BulletEnv(gym.Env):
     return reward
 
   def _get_observation(self):
-    self._observation = self.robot.GetObservation()
+    self._observation = self.robot.get_observation()
     return self._observation
 
   def _noisy_observation(self):
@@ -400,7 +400,7 @@ class BulletEnv(gym.Env):
     if self._observation_noise_stdev > 0:
       observation += (np.random.normal(scale=self._observation_noise_stdev,
                                        size=observation.shape) *
-                      self.robot.GetObservationUpperBound())
+                      self.robot.get_observation_upper_bound())
     return observation
 
   def _transform_action_to_motor_command(self, action):
@@ -410,7 +410,7 @@ class BulletEnv(gym.Env):
                 self._action_bound + action_eps):
           raise ValueError("{}th action {} out of bounds.".format(
               i, action_component))
-      action = self.robot.ConvertFromLegModel(action)
+      action = self.robot.convert_from_leg_model(action)
     return action
 
   if importlib_metadata.version('gym') < "0.9.6":

@@ -97,12 +97,10 @@ class Robot(MotorModel):
   def _record_mass_info_from_urdf(self):
     self._base_mass_urdf = self._pybullet_client.getDynamicsInfo(
         self.quadruped, self.base_link_id)[0]
+    # 先清空，再get?
     self._leg_masses_urdf = []
-    # self._leg_masses_urdf.append(
-    #     self._pybullet_client.getDynamicsInfo(self.quadruped, LEG_LINK_ID[0])[0])
     self._leg_masses_urdf.append(
-        self._pybullet_client.getDynamicsInfo(self.quadruped,
-                                              self.motor_link_id[0])[0])
+        self._pybullet_client.getDynamicsInfo(self.quadruped, self.motor_link_id[0])[0])
 
   def _build_joint_name2id_dict(self):
     num_joints = self._pybullet_client.getNumJoints(self.quadruped)
@@ -162,75 +160,56 @@ class Robot(MotorModel):
       self._build_joint_name2id_dict()
       self._build_motor_id_list()
       self._record_mass_info_from_urdf()
-      self.ResetPose()
+      self.reset_pose()
     #   if self._on_rack:
     #     self._pybullet_client.createConstraint(self.quadruped, -1, -1, -1,
-    #                                            self._pybullet_client.JOINT_FIXED, [0, 0, 0],
-    #                                            [0, 0, 0], [0, 0, 1])
+    #                                  self._pybullet_client.JOINT_FIXED, [0, 0, 0],
+    #                                  [0, 0, 0], [0, 0, 1])
     # else:
-    #   self._pybullet_client.resetBasePositionAndOrientation(self.quadruped, INIT_POSITION,
-    #                                                         INIT_ORIENTATION)
+    #   self._pybullet_client.resetBasePositionAndOrientation(self.quadruped, INIT_POSITION, INIT_ORIENTATION)
     #   self._pybullet_client.resetBaseVelocity(self.quadruped, [0, 0, 0], [0, 0, 0])
     # self.ResetPose(add_constraint=False)
     else:
       self._pybullet_client.resetBasePositionAndOrientation(
           self.quadruped, self.init_position, self.init_orientation)
-      self._pybullet_client.resetBaseVelocity(self.quadruped, [0, 0, 0],
-                                              [0, 0, 0])
-      self.ResetPose()
+      self._pybullet_client.resetBaseVelocity(self.quadruped, [0, 0, 0], [0, 0, 0])
+      self.reset_pose()
     self._overheat_counter = np.zeros(self.num_motors)
     self._motor_enabled_list = [True] * self.num_motors
 
   # def ResetPose(self, add_constraint):
-  #   #del add_constraint
-  #   """Reset the pose of the mdoger7.
-
-  #   Args:
-  #     add_constraint: Whether to add a constraint at the joints of two feet.
-  #   """
   #   for i in range(self.num_legs):
   #     del add_constraint
   #     self._ResetPoseForLeg(i, add_constraint)
 
   # def _ResetPoseForLeg(self, leg_id, add_constraint):
-  #   """Reset the initial pose for the leg.
-
-  #   Args:
-  #     leg_id: It should be 0, 1, 2, 3
-  #     add_constraint: Whether to add a constraint at the joints of two feet.
-  #   """
-  #   del add_constraint
+  #   # del add_constraint
   #   hip = 0
   #   upper_leg_angle = 0    #45*math.pi / 180.0
   #   low_friction_force = 0
-
   #   lower_leg_angle = 0     #45*math.pi / 180.0
-
   #   self.leg_position = LEG_POSITION[leg_id]
   #   self._pybullet_client.resetJointState(self.quadruped,
-  #                                         self._joint_name_to_id[self.leg_position +
-  #                                                                str(1)+"_joint"],
-  #                                         self._h1motor_direction[leg_id] * hip,
-  #                                         targetVelocity=0)
+  #                              self._joint_name_to_id[self.leg_position + str(1)+"_joint"],
+  #                              self._h1motor_direction[leg_id] * hip,
+  #                              targetVelocity=0)
   #   self._pybullet_client.resetJointState(self.quadruped,
-  #                                         self._joint_name_to_id[self.leg_position +
-  #                                                                str(2)+"_joint"],
-  #                                         self._h2motor_direction[leg_id] * upper_leg_angle,
-  #                                         targetVelocity=0)
+  #                              self._joint_name_to_id[self.leg_position + str(2)+"_joint"],
+  #                              self._h2motor_direction[leg_id] * upper_leg_angle,
+  #                              targetVelocity=0)
   #   self._pybullet_client.resetJointState(self.quadruped,
-  #                                         self._joint_name_to_id[self.leg_position +
-  #                                                                str(3)+"_joint"],
-  #                                         self._h3motor_direction[leg_id] * lower_leg_angle,
-  #                                         targetVelocity=0)
+  #                              self._joint_name_to_id[self.leg_position + str(3)+"_joint"],
+  #                              self._h3motor_direction[leg_id] * lower_leg_angle,
+  #                              targetVelocity=0)
 
-  def ResetPose(self):
-    # del add_constraint
+  def reset_pose(self):
+    # delete add_constraint
     for name, i in zip(self.motor_names, range(len(self.motor_names))):
       angle = self.init_motor_angles[i]
       self._pybullet_client.resetJointState(self.quadruped,
-                                            self._joint_name_to_id[name],
-                                            angle,
-                                            targetVelocity=0)
+                                  self._joint_name_to_id[name],
+                                  angle,
+                                  targetVelocity=0)
     for name in self._joint_name_to_id:
       joint_id = self._joint_name_to_id[name]
       self._pybullet_client.setJointMotorControl2(
@@ -272,7 +251,7 @@ class Robot(MotorModel):
     #     targetVelocity=0,
     #     force=low_friction_force)
 
-  def CheckJointContact(self):
+  def check_joint_contact(self):
     """
     @brief: 检查指定的连杆是否与地面接触。
     @return: 表示是否与地面接触。
@@ -282,14 +261,14 @@ class Robot(MotorModel):
         "rf3_joint", "lb1_joint", "lb2_joint", "lb3_joint", "rb1_joint",
         "rb2_joint", "rb3_joint"
     ]
-
     # 初始化接触检测结果
     collision_count = False
     # 转换为连杆 ID
     motor_joint_ids = [self._joint_name_to_id[name] for name in link_names]
     # 获取所有接触点
     contact_points = self._pybullet_client.getContactPoints(
-        bodyA=self.ground_id, bodyB=self.quadruped)
+        bodyA=self.ground_id,
+        bodyB=self.quadruped)
     # 检查接触
     for contact in contact_points:
       link_id = contact[4]  # 接触的连杆 ID
@@ -297,103 +276,47 @@ class Robot(MotorModel):
         collision_count = True
     return collision_count
 
-  # def CheckJointContact(self):
-  #   """
-  #   检查特定关节是否与地面接触。
-  #   Args:
-  #     ground_id (int): 地面的ID。
-  #   Returns:
-  #     dict: 一个字典，包含关节名称和它们是否与地面接触的信息。
-  #   """
-  #   contact_detected = {}
-  #   # 关节名称
-  #   joints_to_check = ["_foot_"]
-  #   # 获取子链ID
-  #   link_ids_to_check = [self._joint_name_to_id[joint] for joint in joints_to_check]
-  #   # 检测接触
-  #   contact_points = self._pybullet_client.getContactPoints(bodyA=self.quadruped, bodyB=self.ground_id)
-  #   # 初始化字典
-  #   for joint in joints_to_check:
-  #       contact_detected[joint] = False
-  #   joint_contact_count = 0
-  #   # 分析接触点
-  #   for contact in contact_points:
-  #       link_id = contact[3]  # 接触的链接ID
-  #       if link_id in link_ids_to_check:
-  #           joint_name = joints_to_check[link_ids_to_check.index(link_id)]
-  #           contact_detected[joint_name] = True
-  #           joint_contact_count+=1
-  #           collision_penalty = -joint_contact_count * 5
-  #       print("collision_penalty:", collision_penalty)
-  #       return collision_penalty
-
-  # def CheckJointContact(self, joint_name_suffix="_3_joint"):
-  #       """检查是否有任何名为'joint_name_suffix'的关节接触到了任何东西。
-  #       Args:
-  #         joint_name_suffix: 要检查的关节名称后缀。
-  #       Returns:
-  #         一个布尔值，如果有任何名为'joint_name_suffix'的关节发生接触，则为True。
-  #       """
-  #       contacts = self._pybullet_client.getContactPoints(bodyA=self.quadruped, bodyB=self.ground_id)
-  #       # print("contacts:", contacts)
-  #       joint_contact_count = 0
-  #       for contact in contacts:
-  #           contact_link_id = contact[3]  # 获取接触的链接ID
-  #           contact_link_info = self._pybullet_client.getJointInfo(self.quadruped, contact_link_id)
-  #           contact_link_name = contact_link_info[1].decode('UTF-8')
-  #           if joint_name_suffix in contact_link_name:
-  #               joint_contact_count += 1
-  #       collision_penalty = -joint_contact_count * 5
-  #       # print("collision_penalty:", collision_penalty)
-  #       return collision_penalty
-
-  def GetBasePosition(self):
-    """Get the position of mdoger7's base.
-
-    Returns:
-      The position of mdoger7's base.
+  def get_base_position(self):
     """
-    position, _ = (self._pybullet_client.getBasePositionAndOrientation(
-        self.quadruped))
+    @brief get the position of mdoger7's base.
+    @return: the position of mdoger7's base.
+    """
+    position, _ = (self._pybullet_client.getBasePositionAndOrientation(self.quadruped))
     return position
 
-  def GetBaseOrientation(self):
-    """Get the orientation of mdoger7's base, represented as quaternion.
-
-    Returns:
-      The orientation of mdoger7's base.
+  def get_base_orientation(self):
     """
-    _, orientation = (self._pybullet_client.getBasePositionAndOrientation(
-        self.quadruped))
+    @brief get the orientation of mdoger7's base, represented as quaternion.
+    @return: the orientation of mdoger7's base.
+    """
+    _, orientation = (self._pybullet_client.getBasePositionAndOrientation(self.quadruped))
     return orientation
 
-  def GetBaseVelocity(self):
-    """Get the velocity of mdoger7's base in the XY plane and the yaw rate.
-
-    Returns:
-      A tuple containing:
-      - The XY velocity of mdoger7's base.
-      - The yaw rate (rotational velocity around Z-axis) of mdoger7's base.
+  def get_base_velocity(self):
+    """
+    @brief get the velocity of mdoger7's base in the xy plane and the yaw rate.
+    @return:
+      a tuple containing:
+      - the xy velocity of mdoger7's base.
+      - the yaw rate (rotational velocity around z-axis) of mdoger7's base.
     """
     linear_velocity, angular_velocity = self._pybullet_client.getBaseVelocity(self.quadruped)
     xy_velocity = np.array(linear_velocity[:2])  # Take only the X and Y components
     yaw_rate = angular_velocity[2]  # Z-axis component represents yaw rate
     return xy_velocity, yaw_rate
 
-  def GetActionDimension(self):
-    """Get the length of the action list.
-
-    Returns:
-      The length of the action list.
+  def get_action_dimension(self):
+    """
+    @brief get the length of the action list.
+    @return: the length of the action list.
     """
     return self.num_motors
 
-  def GetObservationUpperBound(self):
-    """Get the upper bound of the observation.
-
-    Returns:
-      The upper bound of an observation. See GetObservation() for the details
-        of each element of an observation.
+  def get_observation_upper_bound(self):
+  # def get_observation_upper_bound(self):
+    """
+    @brief get the upper bound of the observation.
+    @return the upper bound of an observation. see getobservation() for the details of each element of an observation.
     """
     # upper_bound = np.array([0.0] * self.GetObservationDimension())
     # upper_bound[0:self.num_motors] = math.pi  # Joint angle.
@@ -417,54 +340,50 @@ class Robot(MotorModel):
 
     return upper_bound
 
-  def GetObservationLowerBound(self):
-    """Get the lower bound of the observation."""
-    return -self.GetObservationUpperBound()
+  def get_observation_lower_bound(self):
+    """get the lower bound of the observation."""
+    return -self.get_observation_upper_bound()
 
   def GetObservationDimension(self):
-    """Get the length of the observation list.
-
-    Returns:
-      The length of the observation list.
     """
-    return len(self.GetObservation())
+    @brief get the length of the observation list.
+    @return the length of the observation list.
+    """
+    return len(self.get_observation())
 
-  def GetObservation(self):
-    """Get the observations of mdoger.
+  def get_observation(self):
+    """
+    @brief get the observations of mdoger.
+      it includes the angles, velocities, torques and the orientation of the base.
 
-    It includes the angles, velocities, torques and the orientation of the base.
-
-    Returns:
-      The observation list. observation[0:12] are motor angles. observation[12:24]
-      are motor velocities, observation[24:36] are motor torques.
-      observation[36:48] is the orientation of the base, in quaternion form.
+    @return the observation list. observation[0:12] are motor angles. observation[12:24] are motor velocities, observation[24:36] are motor torques. observation[36:48] is the orientation of the base, in quaternion form.
     """
     observation = []
-    observation.extend(self.GetMotorAngles().tolist())
-    observation.extend(self.GetMotorVelocities().tolist())
-    observation.extend(self.GetMotorTorques().tolist())
-    observation.extend(list(self.GetBaseOrientation()))
+    observation.extend(self.get_motor_angles().tolist())
+    observation.extend(self.get_motor_velocities().tolist())
+    observation.extend(self.get_motor_torques().tolist())
+    observation.extend(list(self.get_base_orientation()))
 
-    xy_velocity, yaw_rate = self.GetBaseVelocity()
+    xy_velocity, yaw_rate = self.get_base_velocity()
     observation.extend(xy_velocity.tolist())  # Add XY velocity to the observation
     observation.append(yaw_rate)  # Add yaw rate to the observation
     return observation
 
-  def ApplyAction(self, motor_cmds):
+  def apply_action(self, motor_cmds):
     """
     @brief Set the desired motor angles to the motors of the mdoger.
       The desired motor angles are clipped based on the maximum allowed velocity. If the pd_control_enabled is True, a torque is calculated according to the difference between current and desired joint angle, as well as the joint velocity. This torque is exerted to the motor. For more information about PD control, please refer to: https://en.wikipedia.org/wiki/PID_controller.
     @param motor_commands: The 12 desired motor angles.
     """
     if self._motor_vel_limit < np.inf:
-      cur_motor_angle = self.GetMotorAngles()
+      cur_motor_angle = self.get_motor_angles()
       motor_cmd_max = (cur_motor_angle + self.time_step * self._motor_vel_limit)
       motor_cmd_min = (cur_motor_angle - self.time_step * self._motor_vel_limit)
       motor_cmds = np.clip(motor_cmds, motor_cmd_min, motor_cmd_max)
 
     if self._accurate_motor_model_enabled or self._pd_control_enabled:
-      q = self.GetMotorAngles()
-      qdot = self.GetMotorVelocities()
+      q = self.get_motor_angles()
+      qdot = self.get_motor_velocities()
       if self._accurate_motor_model_enabled:
         actual_torque, observed_torque = self._motor_model.convert_to_torque(motor_cmds, q, qdot)
         if self._motor_overheat_protection:
@@ -506,7 +425,7 @@ class Robot(MotorModel):
           self._motor_id_list, motor_commands_with_direction):
         self._set_desired_motor_angle_by_id(motor_id, motor_command_with_direction)
 
-  def GetMotorAngles(self):
+  def get_motor_angles(self):
     """
     @brief get the eight motor angles at the current moment.
     @return motor angles.
@@ -518,7 +437,7 @@ class Robot(MotorModel):
     motor_angles = np.multiply(motor_angles, self._motor_direction)
     return motor_angles
 
-  def GetMotorVelocities(self):
+  def get_motor_velocities(self):
     """
     @brief get the velocity of all 12 motors.
     @return velocities of all 12 motors.
@@ -530,7 +449,7 @@ class Robot(MotorModel):
     motor_velocities = np.multiply(motor_velocities, self._motor_direction)
     return motor_velocities
 
-  def GetMotorTorques(self):
+  def get_motor_torques(self):
     """
     @brief get the amount of torques the motors are exerting.
     @return motor torques of all 12 motors.
@@ -545,7 +464,7 @@ class Robot(MotorModel):
       motor_torques = np.multiply(motor_torques, self._motor_direction)
     return motor_torques
 
-  def ConvertFromLegModel(self, actions):
+  def convert_from_leg_model(self, actions):
     motor_angle = copy.deepcopy(actions)
     for i in range(len(actions)):
       motor_angle[i] = math.fmod(actions[i], math.pi)
@@ -580,20 +499,20 @@ class Robot(MotorModel):
   #     motor_angle[i] = (3*math.pi  / 4 + forward_backward_component + extension_component)
   #   return motor_angle
 
-  def GetBaseMassFromURDF(self):
+  def get_base_mass_from_urdf(self):
     """get the mass of the base from the urdf file."""
     return self._base_mass_urdf
 
-  def GetLegMassesFromURDF(self):
+  def get_leg_masses_from_urdf(self):
     """get the mass of the legs from the urdf file."""
     return self._leg_masses_urdf
 
-  def SetBaseMass(self, base_mass):
+  def set_base_mass(self, base_mass):
     self._pybullet_client.changeDynamics(self.quadruped,
-                                         self.base_link_id,
-                                         mass=base_mass)
+                                  self.base_link_id,
+                                  mass=base_mass)
 
-  def SetLegMasses(self, leg_masses):
+  def set_leg_masses(self, leg_masses):
     """
     @brief set the mass of the legs.
       a leg includes leg_link and motor. all four leg_links have the same mass, which is leg_masses[0]. all four motors have the same mass, which is leg_mass[1].
@@ -607,7 +526,7 @@ class Robot(MotorModel):
                                     link_id,
                                     mass=leg_masses[0])
 
-  def SetFootFriction(self, foot_friction):
+  def set_foot_friction(self, foot_friction):
     """
     @brief Set the lateral friction of the feet.
     @param foot_friction: The lateral friction coefficient of the foot. This value is shared by all four feet.
@@ -617,10 +536,10 @@ class Robot(MotorModel):
                                     link_id,
                                     lateralFriction=foot_friction)
 
-  def SetBatteryVoltage(self, voltage):
+  def set_battery_voltage(self, voltage):
     if self._accurate_motor_model_enabled:
       self._motor_model.set_voltage(voltage)
 
-  def SetMotorViscousDamping(self, viscous_damping):
+  def set_motor_viscous_damping(self, viscous_damping):
     if self._accurate_motor_model_enabled:
       self._motor_model.set_viscous_damping(viscous_damping)
