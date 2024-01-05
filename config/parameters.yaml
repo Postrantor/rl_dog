@@ -62,6 +62,42 @@ environment:
     num_motors: 12
     num_legs: 4
     kd_for_pd_controllers: 0.3
+    motor_direction: [-1, -1, 1, 1, -1, 1, 1, -1, 1, -1, -1, 1]
+    h1motor_direction: [-1, -1, 1, 1]
+    h2motor_direction: [-1, 1, 1, -1]
+    h3motor_direction: [1, -1, -1, 1]
+    max_force: 15
+    init_observed_motor_torques: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    init_applied_motor_torques: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    # bases on the readings from 's default pose.
+    init_position: [0, 0, 0.3]
+    init_orientation: [0, 0, 0, 1]
+    default_abduction_angle: 0.0
+    default_hip_angle: 0
+    default_knee_angle: 0
+    motor_link_id: [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]
+    foot_link_id: [3, 7, 11, 115]
+    base_link_id: -1
+    overheat_shutdown_torque: 2.45
+    overheat_shutdown_time: 1.0
+    lower_constraint_point_right: [0, 0.00, 0.] # [nouse]
+    lower_constraint_point_left: [0, 0.0, 0.] # [nouse]
+    leg_position: ["lf", "rf", "lb", "rb"]
+    motor_names:
+      [
+        "lf1_joint",
+        "lf2_joint",
+        "lf3_joint",
+        "rf1_joint",
+        "rf2_joint",
+        "rf3_joint",
+        "lb1_joint",
+        "lb2_joint",
+        "lb3_joint",
+        "rb1_joint",
+        "rb2_joint",
+        "rb3_joint",
+      ]
 
     motor:
       torque_control_enabled: True

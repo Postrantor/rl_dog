@@ -13,17 +13,17 @@ class MotorModel():
   内部电机模型考虑以下因素：比例-微分增益、粘性摩擦、背电动势电压和电流-力矩曲线。
   """
 
-  def __init__(self, parameters_list):
-    self._torque_control_enabled = parameters_list['torque_control_enabled']
-    self._kp = parameters_list['kp']
-    self._kd = parameters_list['kd']
-    self._resistance = parameters_list['motor_resistance'] # 电机电阻为0.186
-    self._voltage = parameters_list['motor_voltage'] # 电机电压为16.0
-    self._torque_constant = parameters_list['motor_torque_constant'] # 电机转矩常数为0.0954
-    self._viscous_damping = parameters_list['motor_viscous_damping'] # 电机粘性阻尼为0
-    self._voltage_clipping = parameters_list['voltage_clipping'] # 电压限制为50V
-    self._observed_torque_limit = parameters_list['observed_torque_limit'] # 观测到的力矩限制为5.7
-    self._motor_speed_limit = parameters_list['motor_speed_limit'] # 电机速度限制
+  def __init__(self, params_list):
+    self._torque_control_enabled = params_list['torque_control_enabled']
+    self._kp = params_list['kp']
+    self._kd = params_list['kd']
+    self._resistance = params_list['motor_resistance'] # 电机电阻
+    self._voltage = params_list['motor_voltage'] # 电机电压
+    self._torque_constant = params_list['motor_torque_constant'] # 电机转矩常数
+    self._viscous_damping = params_list['motor_viscous_damping'] # 电机粘性阻尼
+    self._voltage_clipping = params_list['voltage_clipping'] # 电压限制
+    self._observed_torque_limit = params_list['observed_torque_limit'] # 观测力矩限制
+    self._motor_speed_limit = params_list['motor_speed_limit'] # 电机速度限制
     self._current_table = [0, 10, 20, 30, 40, 50, 60]
     self._torque_table = [0, 1, 1.9, 2.45, 3.0, 3.25, 3.5]
 
@@ -68,7 +68,8 @@ class MotorModel():
     """
     observed_torque = np.clip(
         self._torque_constant * (pwm * self._voltage / self._resistance),
-        -self._observed_torque_limit, self._observed_torque_limit)
+        -self._observed_torque_limit,
+        self._observed_torque_limit)
 
     # 通过电机控制器上的二极管将净电压限制在50V。
     voltage_net = np.clip(

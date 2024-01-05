@@ -9,35 +9,6 @@ import numpy as np
 # from self
 from env import motor
 
-default_abduction_angle = 0.0
-default_hip_angle = 0
-default_knee_angle = 0
-overheat_shutdown_torque = 2.45
-overheat_shutdown_time = 1.0
-lower_constraint_point_right = [0, 0.00, 0.]
-lower_constraint_point_left = [0, 0.0, 0.]
-
-leg_position = ["lf", "rf", "lb", "rb"]
-motor_names = [
-    "lf1_joint", "lf2_joint", "lf3_joint",
-    "rf1_joint", "rf2_joint", "rf3_joint",
-    "lb1_joint", "lb2_joint", "lb3_joint",
-    "rb1_joint", "rb2_joint", "rb3_joint"]
-
-# bases on the readings from 's default pose.
-init_position = [0, 0, 0.3]
-init_orientation = [0, 0, 0, 1]
-# init_motor_angles = 0*[1, -1, -1, 1, 1, -1, 1, 1, -1, 1, 1, -1]
-num_legs = 4
-init_motor_angles = num_legs * [
-    default_abduction_angle,
-    default_hip_angle,
-    default_knee_angle]
-
-motor_link_id = [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]
-foot_link_id = [3, 7, 11, 115]
-base_link_id = -1
-
 
 class Robot():
   """
@@ -67,24 +38,22 @@ class Robot():
 
     self.parameters_list = params_list
     self.num_motors = params_list['num_motors']
-    self.num_legs = params_list['num_legs']
-    self._urdf_env = params_list['urdf_env'][1]
-    self._urdf_robot = params_list['urdf_env'][0]
     self._self_collision_enabled = params_list['self_collision_enabled']
     self._motor_velocity_limit = params_list['motor_velocity_limit']
     self._pd_control_enabled = params_list['pd_control_enabled']
-    self._accurate_motor_model_enabled = params_list['accurate_motor_model_enabled']
     self._motor_overheat_protection = params_list['motor_overheat_protection']
     self._on_rack = params_list['on_rack']
     self.time_step = params_list['time_step']
-    self._motor_direction = [-1, -1, 1, 1, -1, 1, 1, -1, 1, -1, -1, 1]
-    self._h1motor_direction = [-1, -1, 1, 1]
-    self._h2motor_direction = [-1, 1, 1, -1]
-    self._h3motor_direction = [1, -1, -1, 1]
-    self._observed_motor_torques = np.zeros(self.num_motors)
-    self._applied_motor_torques = np.zeros(self.num_motors)
-    self._max_force = 15
+    self._motor_direction = params_list['motor_direction']
+    self._h1motor_direction = params_list['h1motor_direction']
+    self._h2motor_direction = params_list['h2motor_direction']
+    self._h3motor_direction = params_list['h3motor_direction']
+    self._max_force = params_list['max_force']
+    # 这两个实际上应该是输出参数
+    self._observed_motor_torques = np.array(params_list['init_observed_motor_torques'])
+    self._applied_motor_torques = np.array(params_list['init_applied_motor_torques'])
 
+    self._accurate_motor_model_enabled = params_list['accurate_motor_model_enabled']
     if self._accurate_motor_model_enabled:
       self._motor_model = motor.MotorModel(params_list['motor'])
       self._kp = params_list['motor']['kp']
@@ -96,19 +65,45 @@ class Robot():
       self._kp = 1
       self._kd = 1
 
+    self._urdf_env = params_list['urdf_env'][1]
+    self._urdf_robot = params_list['urdf_env'][0]
     self.ground_id = self._pybullet_client.loadURDF("%s/plane.urdf" % self._urdf_env)
+
+    self.overheat_shutdown_torque = params_list['overheat_shutdown_torque']
+    self.overheat_shutdown_time = params_list['overheat_shutdown_time']
+    self.lower_constraint_point_right = params_list['lower_constraint_point_right']
+    self.lower_constraint_point_left = params_list['lower_constraint_point_left']
+    self.leg_position = params_list['leg_position']
+    self.motor_names = params_list['motor_names']
+
+    # bases on the readings from 's default pose.
+    self.init_position = params_list['init_position']
+    self.init_orientation = params_list['init_orientation']
+    self.motor_link_id = params_list['motor_link_id']
+    self.foot_link_id = params_list['foot_link_id']
+    self.base_link_id = params_list['base_link_id']
+
+    self.num_legs = params_list['num_legs']
+    self._default_abduction_angle = params_list['default_abduction_angle']
+    self._default_hip_angle = params_list['default_hip_angle']
+    self._default_knee_angle = params_list['default_knee_angle']
+    self.init_motor_angles = self.num_legs * [
+        self._default_abduction_angle,
+        self._default_hip_angle,
+        self._default_knee_angle]
+    # self.init_motor_angles = 0*[1, -1, -1, 1, 1, -1, 1, 1, -1, 1, 1, -1]
 
     self.Reset()
 
   def _record_mass_info_from_urdf(self):
     self._base_mass_urdf = self._pybullet_client.getDynamicsInfo(
-        self.quadruped, base_link_id)[0]
+        self.quadruped, self.base_link_id)[0]
     self._leg_masses_urdf = []
     # self._leg_masses_urdf.append(
     #     self._pybullet_client.getDynamicsInfo(self.quadruped, LEG_LINK_ID[0])[0])
     self._leg_masses_urdf.append(
         self._pybullet_client.getDynamicsInfo(self.quadruped,
-                                              motor_link_id[0])[0])
+                                              self.motor_link_id[0])[0])
 
   def _build_joint_name2id_dict(self):
     num_joints = self._pybullet_client.getNumJoints(self.quadruped)
@@ -119,7 +114,7 @@ class Robot():
 
   def _build_motor_id_list(self):
     self._motor_id_list = [
-        self._joint_name_to_id[motor_name] for motor_name in motor_names
+        self._joint_name_to_id[motor_name] for motor_name in self.motor_names
     ]
 
   def _set_motor_torque_by_id(self, motor_id, torque):
@@ -153,15 +148,15 @@ class Robot():
       if self._self_collision_enabled:
         self.quadruped = self._pybullet_client.loadURDF(
             self._urdf_robot,
-            init_position,
-            init_orientation,
+            self.init_position,
+            self.init_orientation,
             useFixedBase=self._on_rack,
             flags=self._pybullet_client.URDF_USE_SELF_COLLISION)
       else:
         self.quadruped = self._pybullet_client.loadURDF(
             self._urdf_robot,
-            init_position,
-            init_orientation,
+            self.init_position,
+            self.init_orientation,
             useFixedBase=self._on_rack)
       self._build_joint_name2id_dict()
       self._build_motor_id_list()
@@ -178,7 +173,7 @@ class Robot():
     # self.ResetPose(add_constraint=False)
     else:
       self._pybullet_client.resetBasePositionAndOrientation(
-          self.quadruped, init_position, init_orientation)
+          self.quadruped, self.init_position, self.init_orientation)
       self._pybullet_client.resetBaseVelocity(self.quadruped, [0, 0, 0],
                                               [0, 0, 0])
       self.ResetPose()
@@ -210,27 +205,27 @@ class Robot():
 
   #   lower_leg_angle = 0     #45*math.pi / 180.0
 
-  #   leg_position = LEG_POSITION[leg_id]
+  #   self.leg_position = LEG_POSITION[leg_id]
   #   self._pybullet_client.resetJointState(self.quadruped,
-  #                                         self._joint_name_to_id[leg_position +
+  #                                         self._joint_name_to_id[self.leg_position +
   #                                                                str(1)+"_joint"],
   #                                         self._h1motor_direction[leg_id] * hip,
   #                                         targetVelocity=0)
   #   self._pybullet_client.resetJointState(self.quadruped,
-  #                                         self._joint_name_to_id[leg_position +
+  #                                         self._joint_name_to_id[self.leg_position +
   #                                                                str(2)+"_joint"],
   #                                         self._h2motor_direction[leg_id] * upper_leg_angle,
   #                                         targetVelocity=0)
   #   self._pybullet_client.resetJointState(self.quadruped,
-  #                                         self._joint_name_to_id[leg_position +
+  #                                         self._joint_name_to_id[self.leg_position +
   #                                                                str(3)+"_joint"],
   #                                         self._h3motor_direction[leg_id] * lower_leg_angle,
   #                                         targetVelocity=0)
 
   def ResetPose(self):
     # del add_constraint
-    for name, i in zip(motor_names, range(len(motor_names))):
-      angle = init_motor_angles[i]
+    for name, i in zip(self.motor_names, range(len(self.motor_names))):
+      angle = self.init_motor_angles[i]
       self._pybullet_client.resetJointState(self.quadruped,
                                             self._joint_name_to_id[name],
                                             angle,
@@ -246,8 +241,8 @@ class Robot():
 
     # if add_constraint:
     #   self._pybullet_client.createConstraint(
-    #       self.quadruped, self._joint_name_to_id[leg_position + str(3)+"_joint"],
-    #       self.quadruped, self._joint_name_to_id[leg_position + str(3)+"_joint"],
+    #       self.quadruped, self._joint_name_to_id[self.leg_position + str(3)+"_joint"],
+    #       self.quadruped, self._joint_name_to_id[self.leg_position + str(3)+"_joint"],
     #       self._pybullet_client.JOINT_POINT2POINT, [0, 0, 0], lower_CONSTRAINT_POINT_RIGHT,
     #       lower_CONSTRAINT_POINT_LEFT)
 
@@ -255,23 +250,23 @@ class Robot():
     #   # Disable the default motor in pybullet.
     #   self._pybullet_client.setJointMotorControl2(
     #       bodyIndex=self.quadruped,
-    #       jointIndex=(self._joint_name_to_id[leg_position + str(1)+"_joint"]),
+    #       jointIndex=(self._joint_name_to_id[self.leg_position + str(1)+"_joint"]),
     #       controlMode=self._pybullet_client.VELOCITY_CONTROL,
     #       targetVelocity=0,
     #       force=low_friction_force)
 
     # else:
-    #   self._SetDesiredMotorAngleByName(leg_position + str(1)+"_joint",
+    #   self._SetDesiredMotorAngleByName(self.leg_position + str(1)+"_joint",
     #                                    self._h1motor_direction[leg_id] * hip)
     # self._pybullet_client.setJointMotorControl2(
     #     bodyIndex=self.quadruped,
-    #     jointIndex=(self._joint_name_to_id[leg_position + str(2)+"_joint"]),
+    #     jointIndex=(self._joint_name_to_id[self.leg_position + str(2)+"_joint"]),
     #     controlMode=self._pybullet_client.VELOCITY_CONTROL,
     #     targetVelocity=0,
     #     force=low_friction_force)
     # self._pybullet_client.setJointMotorControl2(
     #     bodyIndex=self.quadruped,
-    #     jointIndex=(self._joint_name_to_id[leg_position + str(3)+"_joint"]),
+    #     jointIndex=(self._joint_name_to_id[self.leg_position + str(3)+"_joint"]),
     #     controlMode=self._pybullet_client.VELOCITY_CONTROL,
     #     targetVelocity=0,
     #     force=low_friction_force)
@@ -379,10 +374,8 @@ class Robot():
       - The XY velocity of mdoger7's base.
       - The yaw rate (rotational velocity around Z-axis) of mdoger7's base.
     """
-    linear_velocity, angular_velocity = self._pybullet_client.getBaseVelocity(
-        self.quadruped)
-    xy_velocity = np.array(
-        linear_velocity[:2])  # Take only the X and Y components
+    linear_velocity, angular_velocity = self._pybullet_client.getBaseVelocity(self.quadruped)
+    xy_velocity = np.array(linear_velocity[:2])  # Take only the X and Y components
     yaw_rate = angular_velocity[2]  # Z-axis component represents yaw rate
     return xy_velocity, yaw_rate
 
@@ -450,25 +443,19 @@ class Robot():
     observation.extend(self.GetMotorVelocities().tolist())
     observation.extend(self.GetMotorTorques().tolist())
     observation.extend(list(self.GetBaseOrientation()))
+
     xy_velocity, yaw_rate = self.GetBaseVelocity()
-    observation.extend(
-        xy_velocity.tolist())  # Add XY velocity to the observation
-    observation.append(yaw_rate)
-    # print('******************')
-    # print('observation:', observation)# Add yaw rate to the observation
+    observation.extend(xy_velocity.tolist())  # Add XY velocity to the observation
+    observation.append(yaw_rate)  # Add yaw rate to the observation
     return observation
 
   def ApplyAction(self, motor_commands):
-    """Set the desired motor angles to the motors of the mdoger.
+    """
+    @brief Set the desired motor angles to the motors of the mdoger.
 
-    The desired motor angles are clipped based on the maximum allowed velocity.
-    If the pd_control_enabled is True, a torque is calculated according to
-    the difference between current and desired joint angle, as well as the joint
-    velocity. This torque is exerted to the motor. For more information about
-    PD control, please refer to: https://en.wikipedia.org/wiki/PID_controller.
+      The desired motor angles are clipped based on the maximum allowed velocity. If the pd_control_enabled is True, a torque is calculated according to the difference between current and desired joint angle, as well as the joint velocity. This torque is exerted to the motor. For more information about PD control, please refer to: https://en.wikipedia.org/wiki/PID_controller.
 
-    Args:
-      motor_commands: The 12 desired motor angles.
+    @param motor_commands: The 12 desired motor angles.
     """
     if self._motor_velocity_limit < np.inf:
       current_motor_angle = self.GetMotorAngles()
@@ -487,12 +474,12 @@ class Robot():
             motor_commands, q, qdot)
         if self._motor_overheat_protection:
           for i in range(self.num_motors):
-            if abs(actual_torque[i]) > overheat_shutdown_torque:
+            if abs(actual_torque[i]) > self.overheat_shutdown_torque:
               self._overheat_counter[i] += 1
             else:
               self._overheat_counter[i] = 0
             if (self._overheat_counter[i]
-                > overheat_shutdown_time / self.time_step):
+                > self.overheat_shutdown_time / self.time_step):
               self._motor_enabled_list[i] = False
 
         # The torque is already in the observation space because we use
@@ -618,7 +605,7 @@ class Robot():
 
   def SetBaseMass(self, base_mass):
     self._pybullet_client.changeDynamics(self.quadruped,
-                                         base_link_id,
+                                         self.base_link_id,
                                          mass=base_mass)
 
   def SetLegMasses(self, leg_masses):
@@ -634,7 +621,7 @@ class Robot():
     """
     # for link_id in LEG_LINK_ID:
     #   self._pybullet_client.changeDynamics(self.quadruped, link_id, mass=leg_masses[0])
-    for link_id in motor_link_id:
+    for link_id in self.motor_link_id:
       self._pybullet_client.changeDynamics(self.quadruped,
                                     link_id,
                                     mass=leg_masses[0])
@@ -646,7 +633,7 @@ class Robot():
       foot_friction: The lateral friction coefficient of the foot. This value is
         shared by all four feet.
     """
-    for link_id in foot_link_id:
+    for link_id in self.foot_link_id:
       self._pybullet_client.changeDynamics(self.quadruped,
                                     link_id,
                                     lateralFriction=foot_friction)
