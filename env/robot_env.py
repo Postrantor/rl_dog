@@ -79,7 +79,7 @@ class BulletEnv(Env, Robot):
     else:
       self._bullet_cli = bc.BulletClient()
 
-    self._urdf_root = params_list['urdf_env']
+    self._urdf_env = params_list['urdf_env'][1]
     self._env_randomizer = EnvRandomizer(params_list['randomizer'])
 
     self._time_step = params_list['time_step']
@@ -156,12 +156,10 @@ class BulletEnv(Env, Robot):
       self._bullet_cli.resetSimulation()
       self._bullet_cli.setPhysicsEngineParameter(numSolverIterations=int(self._num_bullet_solver_iterations))
       self._bullet_cli.setTimeStep(self._time_step)
-      plane = self._bullet_cli.loadURDF("%s/plane.urdf" % self._urdf_root[1])
+      plane = self._bullet_cli.loadURDF("%s/plane.urdf" % self._urdf_env)
       self._bullet_cli.changeVisualShape(plane, -1, rgbaColor=[1, 1, 1, 0.9])
       self._bullet_cli.configureDebugVisualizer(self._bullet_cli.COV_ENABLE_PLANAR_REFLECTION, 0)
       self._bullet_cli.setGravity(0, 0, -10)
-      acc_motor = self._accurate_motor_model_enabled
-
       self.robot = Robot(self.params_list['robot'], bullet_cli=self._bullet_cli)
     else:
       self.robot.Reset(reload_urdf=False)
@@ -169,13 +167,15 @@ class BulletEnv(Env, Robot):
     if self._env_randomizer is not None:
       self._env_randomizer.randomize_env(self.robot)
 
-    self._env_step_counter = 0
-    self._last_base_position = [0, 0, 0]
+    self._env_step_counter = self.params_list['env_step_counter'] # 0
+    self._last_base_position = self.params_list['last_base_position'] # [0, 0, 0]
     self._objectives = []
+
     self._bullet_cli.resetDebugVisualizerCamera(self._cam_dist,
-                                                     self._cam_yaw,
-                                                     self._cam_pitch,
-                                                     [0, 0, 0])
+                                      self._cam_yaw,
+                                      self._cam_pitch,
+                                      [0, 0, 0])
+
     if not self._torque_control_enabled:
       for _ in range(100):
         if self._pd_control_enabled or self._accurate_motor_model_enabled:
@@ -382,8 +382,13 @@ class BulletEnv(Env, Robot):
               10 * yaw_rate_reward + 50 * height_reward
               )  #+ self.mdoger7.CheckJointContact()
     self._objectives.append([
-        forward_reward, energy_reward, drift_reward, shake_reward,
-        xy_velocity_reward, yaw_rate_reward, height_reward
+        forward_reward,
+        energy_reward,
+        drift_reward,
+        shake_reward,
+        xy_velocity_reward,
+        yaw_rate_reward,
+        height_reward
     ])
     return reward
 

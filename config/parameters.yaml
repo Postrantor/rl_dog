@@ -39,10 +39,10 @@ environment:
   cam_dist: 1.0
   cam_yaw: 0
   cam_pitch: -30
-  env_step_counter: 0
   last_frame_time: 0.0
   num_bullet_solver_iterations: 300
   action_bound: 1
+  env_step_counter: 0
   last_base_position: [0, 0, 0]
   observation: []
   num_substeps: 5
