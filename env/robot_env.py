@@ -3,16 +3,15 @@
 This file implements the gym environment of mdoger7.
 """
 
-import os
 import math
 import time
 from random import uniform
 import importlib_metadata
-# virtual
-import gym
-from gym import spaces
-from gym.utils import seeding
 import numpy as np
+# virtual
+from gym import spaces
+from gym.core import Env
+from gym.utils import seeding
 import pybullet
 from pybullet_utils import bullet_client as bc
 from pybullet_envs.bullet.env_randomizer_base import EnvRandomizerBase
@@ -55,7 +54,7 @@ class EnvRandomizer(EnvRandomizerBase):
 
 from env.robot_model import Robot
 
-class BulletEnv(gym.Env, Robot):
+class BulletEnv(Env, Robot):
   """
   @brief The gym environment for the robot.
 
