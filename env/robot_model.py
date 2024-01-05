@@ -7,10 +7,10 @@ import copy
 import math
 import numpy as np
 # from self
-from env import motor
+from env.motor import MotorModel
 
 
-class Robot():
+class Robot(MotorModel):
   """
   The robot class that simulates a quadruped robot from Ghost Robotics.
   """
@@ -39,7 +39,7 @@ class Robot():
     self.parameters_list = params_list
     self.num_motors = params_list['num_motors']
     self._self_collision_enabled = params_list['self_collision_enabled']
-    self._motor_velocity_limit = params_list['motor_velocity_limit']
+    self._motor_vel_limit = params_list['motor_velocity_limit']
     self._pd_control_enabled = params_list['pd_control_enabled']
     self._motor_overheat_protection = params_list['motor_overheat_protection']
     self._on_rack = params_list['on_rack']
@@ -55,7 +55,7 @@ class Robot():
 
     self._accurate_motor_model_enabled = params_list['accurate_motor_model_enabled']
     if self._accurate_motor_model_enabled:
-      self._motor_model = motor.MotorModel(params_list['motor'])
+      self._motor_model = MotorModel(params_list['motor'])
       self._kp = params_list['motor']['kp']
       self._kd = params_list['motor']['kd']
     elif self._pd_control_enabled:
@@ -91,7 +91,6 @@ class Robot():
         self._default_abduction_angle,
         self._default_hip_angle,
         self._default_knee_angle]
-    # self.init_motor_angles = 0*[1, -1, -1, 1, 1, -1, 1, 1, -1, 1, 1, -1]
 
     self.Reset()
 
@@ -117,7 +116,9 @@ class Robot():
         self._joint_name_to_id[motor_name] for motor_name in self.motor_names
     ]
 
-  def _set_motor_torque_by_id(self, motor_id, torque):
+  def _set_motor_torque_by_id(self, motor_id, torque, enable=1):
+    if not enable:
+      torque = 0
     self._pybullet_client.setJointMotorControl2(
         bodyIndex=self.quadruped,
         jointIndex=motor_id,
@@ -449,29 +450,23 @@ class Robot():
     observation.append(yaw_rate)  # Add yaw rate to the observation
     return observation
 
-  def ApplyAction(self, motor_commands):
+  def ApplyAction(self, motor_cmds):
     """
     @brief Set the desired motor angles to the motors of the mdoger.
-
       The desired motor angles are clipped based on the maximum allowed velocity. If the pd_control_enabled is True, a torque is calculated according to the difference between current and desired joint angle, as well as the joint velocity. This torque is exerted to the motor. For more information about PD control, please refer to: https://en.wikipedia.org/wiki/PID_controller.
-
     @param motor_commands: The 12 desired motor angles.
     """
-    if self._motor_velocity_limit < np.inf:
-      current_motor_angle = self.GetMotorAngles()
-      motor_commands_max = (current_motor_angle +
-                            self.time_step * self._motor_velocity_limit)
-      motor_commands_min = (current_motor_angle -
-                            self.time_step * self._motor_velocity_limit)
-      motor_commands = np.clip(motor_commands, motor_commands_min,
-                               motor_commands_max)
+    if self._motor_vel_limit < np.inf:
+      cur_motor_angle = self.GetMotorAngles()
+      motor_cmd_max = (cur_motor_angle + self.time_step * self._motor_vel_limit)
+      motor_cmd_min = (cur_motor_angle - self.time_step * self._motor_vel_limit)
+      motor_cmds = np.clip(motor_cmds, motor_cmd_min, motor_cmd_max)
 
     if self._accurate_motor_model_enabled or self._pd_control_enabled:
       q = self.GetMotorAngles()
       qdot = self.GetMotorVelocities()
       if self._accurate_motor_model_enabled:
-        actual_torque, observed_torque = self._motor_model.convert_to_torque(
-            motor_commands, q, qdot)
+        actual_torque, observed_torque = self._motor_model.convert_to_torque(motor_cmds, q, qdot)
         if self._motor_overheat_protection:
           for i in range(self.num_motors):
             if abs(actual_torque[i]) > self.overheat_shutdown_torque:
@@ -487,42 +482,34 @@ class Robot():
         self._observed_motor_torques = observed_torque
 
         # Transform into the motor space when applying the torque.
-        self._applied_motor_torque = np.multiply(actual_torque,
-                                                 self._motor_direction)
-
+        self._applied_motor_torque = np.multiply(actual_torque, self._motor_direction)
         for motor_id, motor_torque, motor_enabled in zip(
-            self._motor_id_list, self._applied_motor_torque,
+            self._motor_id_list,
+            self._applied_motor_torque,
             self._motor_enabled_list):
-          if motor_enabled:
-            self._set_motor_torque_by_id(motor_id, motor_torque)
-          else:
-            self._set_motor_torque_by_id(motor_id, 0)
+          self._set_motor_torque_by_id(motor_id, motor_torque, motor_enabled)
       else:
-        torque_commands = -self._kp * (q - motor_commands) - self._kd * qdot
-
+        torque_commands = -self._kp * (q - motor_cmds) - self._kd * qdot
         # The torque is already in the observation space because we use
         # GetMotorAngles and GetMotorVelocities.
         self._observed_motor_torques = torque_commands
-
         # Transform into the motor space when applying the torque.
         self._applied_motor_torques = np.multiply(self._observed_motor_torques,
-                                                  self._motor_direction)
-
+                                          self._motor_direction)
         for motor_id, motor_torque in zip(self._motor_id_list,
-                                          self._applied_motor_torques):
+                                    self._applied_motor_torques):
           self._set_motor_torque_by_id(motor_id, motor_torque)
     else:
-      motor_commands_with_direction = np.multiply(motor_commands,
+      motor_commands_with_direction = np.multiply(motor_cmds,
                                                   self._motor_direction)
       for motor_id, motor_command_with_direction in zip(
           self._motor_id_list, motor_commands_with_direction):
         self._set_desired_motor_angle_by_id(motor_id, motor_command_with_direction)
 
   def GetMotorAngles(self):
-    """Get the eight motor angles at the current moment.
-
-    Returns:
-      Motor angles.
+    """
+    @brief get the eight motor angles at the current moment.
+    @return motor angles.
     """
     motor_angles = [
         self._pybullet_client.getJointState(self.quadruped, motor_id)[0]
@@ -532,10 +519,9 @@ class Robot():
     return motor_angles
 
   def GetMotorVelocities(self):
-    """Get the velocity of all 12 motors.
-
-    Returns:
-      Velocities of all 12 motors.
+    """
+    @brief get the velocity of all 12 motors.
+    @return velocities of all 12 motors.
     """
     motor_velocities = [
         self._pybullet_client.getJointState(self.quadruped, motor_id)[1]
@@ -545,10 +531,9 @@ class Robot():
     return motor_velocities
 
   def GetMotorTorques(self):
-    """Get the amount of torques the motors are exerting.
-
-    Returns:
-      Motor torques of all 12 motors.
+    """
+    @brief get the amount of torques the motors are exerting.
+    @return motor torques of all 12 motors.
     """
     if self._accurate_motor_model_enabled or self._pd_control_enabled:
       return self._observed_motor_torques
@@ -596,11 +581,11 @@ class Robot():
   #   return motor_angle
 
   def GetBaseMassFromURDF(self):
-    """Get the mass of the base from the URDF file."""
+    """get the mass of the base from the urdf file."""
     return self._base_mass_urdf
 
   def GetLegMassesFromURDF(self):
-    """Get the mass of the legs from the URDF file."""
+    """get the mass of the legs from the urdf file."""
     return self._leg_masses_urdf
 
   def SetBaseMass(self, base_mass):
@@ -609,15 +594,11 @@ class Robot():
                                          mass=base_mass)
 
   def SetLegMasses(self, leg_masses):
-    """Set the mass of the legs.
-
-    A leg includes leg_link and motor. All four leg_links have the same mass,
-    which is leg_masses[0]. All four motors have the same mass, which is
-    leg_mass[1].
-
-    Args:
-      leg_masses: The leg masses. leg_masses[0] is the mass of the leg link.
-        leg_masses[1] is the mass of the motor.
+    """
+    @brief set the mass of the legs.
+      a leg includes leg_link and motor. all four leg_links have the same mass, which is leg_masses[0]. all four motors have the same mass, which is leg_mass[1].
+    @param leg_masses: the leg masses. leg_masses[0] is the mass of the leg link.
+            leg_masses[1] is the mass of the motor.
     """
     # for link_id in LEG_LINK_ID:
     #   self._pybullet_client.changeDynamics(self.quadruped, link_id, mass=leg_masses[0])
@@ -627,11 +608,9 @@ class Robot():
                                     mass=leg_masses[0])
 
   def SetFootFriction(self, foot_friction):
-    """Set the lateral friction of the feet.
-
-    Args:
-      foot_friction: The lateral friction coefficient of the foot. This value is
-        shared by all four feet.
+    """
+    @brief Set the lateral friction of the feet.
+    @param foot_friction: The lateral friction coefficient of the foot. This value is shared by all four feet.
     """
     for link_id in self.foot_link_id:
       self._pybullet_client.changeDynamics(self.quadruped,
