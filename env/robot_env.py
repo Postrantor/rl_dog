@@ -259,7 +259,7 @@ class BulletEnv(gym.Env):
     rgb_array = rgb_array[:, :, :3]
     return rgb_array
 
-  def get_mdoger7_motor_angles(self):
+  def get_motor_angles(self):
     """Get the mdoger7's motor angles.
 
     Returns:
@@ -269,7 +269,7 @@ class BulletEnv(gym.Env):
         motor_angle_observation_index:motor_angle_observation_index +
         num_motors])
 
-  def get_mdoger7_motor_velocities(self):
+  def get_motor_velocities(self):
     """Get the mdoger7's motor velocities.
 
     Returns:
@@ -279,7 +279,7 @@ class BulletEnv(gym.Env):
         motor_velocity_observation_index:motor_velocity_observation_index +
         num_motors])
 
-  def get_mdoger7_motor_torques(self):
+  def get_motor_torques(self):
     """Get the mdoger7's motor torques.
 
     Returns:
@@ -289,7 +289,7 @@ class BulletEnv(gym.Env):
         motor_torque_observation_index:motor_torque_observation_index +
         num_motors])
 
-  def get_mdoger7_base_orientation(self):
+  def get_base_orientation(self):
     """Get the mdoger7's base orientation, represented by a quaternion.
 
     Returns:

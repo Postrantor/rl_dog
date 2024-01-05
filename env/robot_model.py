@@ -100,7 +100,7 @@ class Robot():
 
     self.Reset()
 
-  def _RecordMassInfoFromURDF(self):
+  def _record_mass_info_from_urdf(self):
     self._base_mass_urdf = self._pybullet_client.getDynamicsInfo(
         self.quadruped, base_link_id)[0]
     self._leg_masses_urdf = []
@@ -110,26 +110,26 @@ class Robot():
         self._pybullet_client.getDynamicsInfo(self.quadruped,
                                               motor_link_id[0])[0])
 
-  def _BuildJointNameToIdDict(self):
+  def _build_joint_name2id_dict(self):
     num_joints = self._pybullet_client.getNumJoints(self.quadruped)
     self._joint_name_to_id = {}
     for i in range(num_joints):
       joint_info = self._pybullet_client.getJointInfo(self.quadruped, i)
       self._joint_name_to_id[joint_info[1].decode("UTF-8")] = joint_info[0]
 
-  def _BuildMotorIdList(self):
+  def _build_motor_id_list(self):
     self._motor_id_list = [
         self._joint_name_to_id[motor_name] for motor_name in motor_names
     ]
 
-  def _SetMotorTorqueById(self, motor_id, torque):
+  def _set_motor_torque_by_id(self, motor_id, torque):
     self._pybullet_client.setJointMotorControl2(
         bodyIndex=self.quadruped,
         jointIndex=motor_id,
         controlMode=self._pybullet_client.TORQUE_CONTROL,
         force=torque)
 
-  def _SetDesiredMotorAngleById(self, motor_id, desired_angle):
+  def _set_desired_motor_angle_by_id(self, motor_id, desired_angle):
     self._pybullet_client.setJointMotorControl2(
         bodyIndex=self.quadruped,
         jointIndex=motor_id,
@@ -139,8 +139,8 @@ class Robot():
         velocityGain=self._kd,
         force=self._max_force)
 
-  def _SetDesiredMotorAngleByName(self, motor_name, desired_angle):
-    self._SetDesiredMotorAngleById(self._joint_name_to_id[motor_name],
+  def _set_desired_motor_angle_by_name(self, motor_name, desired_angle):
+    self._set_desired_motor_angle_by_id(self._joint_name_to_id[motor_name],
                                    desired_angle)
 
   def Reset(self, reload_urdf=True):
@@ -163,9 +163,9 @@ class Robot():
             init_position,
             init_orientation,
             useFixedBase=self._on_rack)
-      self._BuildJointNameToIdDict()
-      self._BuildMotorIdList()
-      self._RecordMassInfoFromURDF()
+      self._build_joint_name2id_dict()
+      self._build_motor_id_list()
+      self._record_mass_info_from_urdf()
       self.ResetPose()
     #   if self._on_rack:
     #     self._pybullet_client.createConstraint(self.quadruped, -1, -1, -1,
@@ -507,9 +507,9 @@ class Robot():
             self._motor_id_list, self._applied_motor_torque,
             self._motor_enabled_list):
           if motor_enabled:
-            self._SetMotorTorqueById(motor_id, motor_torque)
+            self._set_motor_torque_by_id(motor_id, motor_torque)
           else:
-            self._SetMotorTorqueById(motor_id, 0)
+            self._set_motor_torque_by_id(motor_id, 0)
       else:
         torque_commands = -self._kp * (q - motor_commands) - self._kd * qdot
 
@@ -523,13 +523,13 @@ class Robot():
 
         for motor_id, motor_torque in zip(self._motor_id_list,
                                           self._applied_motor_torques):
-          self._SetMotorTorqueById(motor_id, motor_torque)
+          self._set_motor_torque_by_id(motor_id, motor_torque)
     else:
       motor_commands_with_direction = np.multiply(motor_commands,
                                                   self._motor_direction)
       for motor_id, motor_command_with_direction in zip(
           self._motor_id_list, motor_commands_with_direction):
-        self._SetDesiredMotorAngleById(motor_id, motor_command_with_direction)
+        self._set_desired_motor_angle_by_id(motor_id, motor_command_with_direction)
 
   def GetMotorAngles(self):
     """Get the eight motor angles at the current moment.
