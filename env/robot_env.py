@@ -55,19 +55,6 @@ class EnvRandomizer(EnvRandomizerBase):
 
 from env.robot_model import Robot
 
-# robot range
-num_substeps = 5
-num_motors = 12
-motor_angle_observation_index = 0
-motor_velocity_observation_index = motor_angle_observation_index + num_motors
-motor_torque_observation_index = motor_velocity_observation_index + num_motors
-base_orientation_observation_index = motor_torque_observation_index + num_motors
-
-action_eps = 0.02
-observation_eps = 0.02
-render_height = 720
-render_width = 960
-
 class BulletEnv(gym.Env, Robot):
   """
   @brief The gym environment for the robot.
@@ -89,23 +76,34 @@ class BulletEnv(gym.Env, Robot):
 
     self._is_render = params_list['render']  # 是否渲染仿真
     if self._is_render:
-      self._bullet_client = bc.BulletClient(connection_mode=pybullet.GUI)
+      self._bullet_cli = bc.BulletClient(connection_mode=pybullet.GUI)
     else:
-      self._bullet_client = bc.BulletClient()
+      self._bullet_cli = bc.BulletClient()
 
     self._urdf_root = params_list['urdf_env']
     self._env_randomizer = EnvRandomizer(params_list['randomizer'])
 
-    self._time_step = 0.01
-    self._cam_dist = 1.0
-    self._cam_yaw = 0
-    self._cam_pitch = -30
-    self._env_step_counter = 0
-    self._last_frame_time = 0.0
-    self._num_bullet_solver_iterations = 300
-    self._action_bound = 1
-    self._last_base_position = [0, 0, 0]
-    self._observation = []
+    self._time_step = params_list['time_step']
+    self._cam_dist = params_list['cam_dist']
+    self._cam_yaw = params_list['cam_yaw']
+    self._cam_pitch = params_list['cam_pitch']
+    self._env_step_counter = params_list['env_step_counter']
+    self._last_frame_time = params_list['last_frame_time']
+    self._num_bullet_solver_iterations = params_list['num_bullet_solver_iterations']
+    self._action_bound = params_list['action_bound']
+    self._last_base_position = params_list['last_base_position']
+    self._observation = params_list['observation']
+
+    self.num_substeps = params_list['num_substeps']
+    self.num_motors = params_list['num_motors']
+    self.motor_angle_observation_index = params_list['motor_angle_observation_index']
+    self.action_eps = params_list['action_eps']
+    self.observation_eps = params_list['observation_eps']
+    self.render_height = params_list['render_height']
+    self.render_width = params_list['render_width']
+    self.motor_velocity_observation_index = self.motor_angle_observation_index + self.num_motors
+    self.motor_torque_observation_index = self.motor_velocity_observation_index + self.num_motors
+    self.base_orientation_observation_index = self.motor_torque_observation_index + self.num_motors
 
     self._action_repeat = params_list['action_repeat']  # 运动重复的次数
     self._distance_weight = params_list['distance_weight']  # 距离项在奖励中的权重
@@ -125,17 +123,17 @@ class BulletEnv(gym.Env, Robot):
     self._accurate_motor_model_enabled = params_list['accurate_motor_model_enabled'] # 是否使用准确的直流电机模型
     # PD control needs smaller time step for stability.
     if self._pd_control_enabled or self._accurate_motor_model_enabled:
-      self._time_step /= num_substeps
-      self._num_bullet_solver_iterations /= num_substeps
-      self._action_repeat *= num_substeps
+      self._time_step /= self.num_substeps
+      self._num_bullet_solver_iterations /= self.num_substeps
+      self._action_repeat *= self.num_substeps
 
     #
     self.seed()
     self.reset()
 
     #
-    observation_high = (self.robot.get_observation_upper_bound() + observation_eps)
-    observation_low = (self.robot.get_observation_lower_bound() - observation_eps)
+    observation_high = (self.robot.get_observation_upper_bound() + self.observation_eps)
+    observation_low = (self.robot.get_observation_lower_bound() - self.observation_eps)
     action_dim = 12
     action_high = np.array([self._action_bound] * action_dim)
 
@@ -156,16 +154,16 @@ class BulletEnv(gym.Env, Robot):
 
   def reset(self):
     if self._hard_reset:
-      self._bullet_client.resetSimulation()
-      self._bullet_client.setPhysicsEngineParameter(numSolverIterations=int(self._num_bullet_solver_iterations))
-      self._bullet_client.setTimeStep(self._time_step)
-      plane = self._bullet_client.loadURDF("%s/plane.urdf" % self._urdf_root[1])
-      self._bullet_client.changeVisualShape(plane, -1, rgbaColor=[1, 1, 1, 0.9])
-      self._bullet_client.configureDebugVisualizer(self._bullet_client.COV_ENABLE_PLANAR_REFLECTION, 0)
-      self._bullet_client.setGravity(0, 0, -10)
+      self._bullet_cli.resetSimulation()
+      self._bullet_cli.setPhysicsEngineParameter(numSolverIterations=int(self._num_bullet_solver_iterations))
+      self._bullet_cli.setTimeStep(self._time_step)
+      plane = self._bullet_cli.loadURDF("%s/plane.urdf" % self._urdf_root[1])
+      self._bullet_cli.changeVisualShape(plane, -1, rgbaColor=[1, 1, 1, 0.9])
+      self._bullet_cli.configureDebugVisualizer(self._bullet_cli.COV_ENABLE_PLANAR_REFLECTION, 0)
+      self._bullet_cli.setGravity(0, 0, -10)
       acc_motor = self._accurate_motor_model_enabled
 
-      self.robot = Robot(self.params_list['robot'], bullet_cli=self._bullet_client)
+      self.robot = Robot(self.params_list['robot'], bullet_cli=self._bullet_cli)
     else:
       self.robot.Reset(reload_urdf=False)
 
@@ -175,7 +173,7 @@ class BulletEnv(gym.Env, Robot):
     self._env_step_counter = 0
     self._last_base_position = [0, 0, 0]
     self._objectives = []
-    self._bullet_client.resetDebugVisualizerCamera(self._cam_dist,
+    self._bullet_cli.resetDebugVisualizerCamera(self._cam_dist,
                                                      self._cam_yaw,
                                                      self._cam_pitch,
                                                      [0, 0, 0])
@@ -183,7 +181,7 @@ class BulletEnv(gym.Env, Robot):
       for _ in range(100):
         if self._pd_control_enabled or self._accurate_motor_model_enabled:
           self.robot.apply_action([math.pi] * 12)
-        self._bullet_client.stepSimulation()
+        self._bullet_cli.stepSimulation()
     return self._noisy_observation()
 
   def seed(self, seed=None):
@@ -216,17 +214,17 @@ class BulletEnv(gym.Env, Robot):
         time.sleep(time_to_sleep)
 
       base_pos = self.robot.get_base_position()
-      camInfo = self._bullet_client.getDebugVisualizerCamera()
+      camInfo = self._bullet_cli.getDebugVisualizerCamera()
       distance = camInfo[10]
       yaw = camInfo[8]
       pitch = camInfo[9]
-      self._bullet_client.resetDebugVisualizerCamera(distance, yaw, pitch,
+      self._bullet_cli.resetDebugVisualizerCamera(distance, yaw, pitch,
                                                        base_pos)
 
     action = self._transform_action_to_motor_command(action)
     for _ in range(self._action_repeat):
       self.robot.apply_action(action)
-      self._bullet_client.stepSimulation()
+      self._bullet_cli.stepSimulation()
 
     self._env_step_counter += 1
     reward = self._reward()
@@ -237,21 +235,21 @@ class BulletEnv(gym.Env, Robot):
     if mode != "rgb_array":
       return np.array([])
     base_pos = self.robot.get_base_position()
-    view_matrix = self._bullet_client.computeViewMatrixFromYawPitchRoll(
+    view_matrix = self._bullet_cli.computeViewMatrixFromYawPitchRoll(
         cameraTargetPosition=base_pos,
         distance=self._cam_dist,
         yaw=self._cam_yaw,
         pitch=self._cam_pitch,
         roll=0,
         upAxisIndex=2)
-    proj_matrix = self._bullet_client.computeProjectionMatrixFOV(
+    proj_matrix = self._bullet_cli.computeProjectionMatrixFOV(
         fov=60,
-        aspect=float(render_width) / render_height,
+        aspect=float(self.render_width) / self.render_height,
         nearVal=0.1,
         farVal=100.0)
-    (_, _, px, _, _) = self._bullet_client.getCameraImage(
-        width=render_width,
-        height=render_height,
+    (_, _, px, _, _) = self._bullet_cli.getCameraImage(
+        width=self.render_width,
+        height=self.render_height,
         viewMatrix=view_matrix,
         projectionMatrix=proj_matrix,
         renderer=pybullet.ER_BULLET_HARDWARE_OPENGL)
@@ -266,8 +264,8 @@ class BulletEnv(gym.Env, Robot):
       A numpy array of motor angles.
     """
     return np.array(self._observation[
-        motor_angle_observation_index:motor_angle_observation_index +
-        num_motors])
+        self.motor_angle_observation_index:self.motor_angle_observation_index +
+        self.num_motors])
 
   def get_motor_velocities(self):
     """Get the mdoger7's motor velocities.
@@ -276,8 +274,8 @@ class BulletEnv(gym.Env, Robot):
       A numpy array of motor velocities.
     """
     return np.array(self._observation[
-        motor_velocity_observation_index:motor_velocity_observation_index +
-        num_motors])
+        self.motor_velocity_observation_index:self.motor_velocity_observation_index +
+        self.num_motors])
 
   def get_motor_torques(self):
     """Get the mdoger7's motor torques.
@@ -286,8 +284,8 @@ class BulletEnv(gym.Env, Robot):
       A numpy array of motor torques.
     """
     return np.array(self._observation[
-        motor_torque_observation_index:motor_torque_observation_index +
-        num_motors])
+        self.motor_torque_observation_index:self.motor_torque_observation_index +
+        self.num_motors])
 
   def get_base_orientation(self):
     """Get the mdoger7's base orientation, represented by a quaternion.
@@ -295,7 +293,7 @@ class BulletEnv(gym.Env, Robot):
     Returns:
       A numpy array of mdoger7's orientation.
     """
-    return np.array(self._observation[base_orientation_observation_index:])
+    return np.array(self._observation[self.base_orientation_observation_index:])
 
   def is_fallen(self):
     """Decide whether the mdoger7 has fallen.
@@ -309,7 +307,7 @@ class BulletEnv(gym.Env, Robot):
     """
     orientation = self.robot.get_base_orientation()
     position = self.robot.get_base_position()
-    rot_mat = self._bullet_client.getMatrixFromQuaternion(orientation)
+    rot_mat = self._bullet_cli.getMatrixFromQuaternion(orientation)
     # print("rot_mat:", rot_mat)
     # print("Type of rot_mat:", type(rot_mat))
     # local_up_x =  rot_mat[0:3]
@@ -337,7 +335,7 @@ class BulletEnv(gym.Env, Robot):
 
   def _reward(self):
     orientation = self.robot.get_base_orientation()
-    rot_mat = self._bullet_client.getMatrixFromQuaternion(orientation)
+    rot_mat = self._bullet_cli.getMatrixFromQuaternion(orientation)
     local_up_x = rot_mat[0:3]
     local_up_y = rot_mat[3:6]
     local_up_z = rot_mat[6:]
@@ -406,8 +404,8 @@ class BulletEnv(gym.Env, Robot):
   def _transform_action_to_motor_command(self, action):
     if self._leg_model_enabled:
       for i, action_component in enumerate(action):
-        if not (-self._action_bound - action_eps <= action_component <=
-                self._action_bound + action_eps):
+        if not (-self._action_bound - self.action_eps <= action_component <=
+                self._action_bound + self.action_eps):
           raise ValueError("{}th action {} out of bounds.".format(
               i, action_component))
       action = self.robot.convert_from_leg_model(action)

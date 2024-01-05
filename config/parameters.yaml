@@ -35,7 +35,23 @@ environment:
   hard_reset: True # 是否在重置时清除仿真并加载所有内容。如果设置为false，则重置只是将model放回起始位置并将其姿势设为初始配置。
   on_rack: False # 是否将model放在架子上。这仅用于调试行走步态。在此模式下，model的基座悬挂在半空中，以便更清晰地可视化其步态。
   render: True # 是否渲染仿真
-  # kd_for_pd_controllers: 0.3 # 用于马达的PD控制器的kd值
+  time_step: 0.01
+  cam_dist: 1.0
+  cam_yaw: 0
+  cam_pitch: -30
+  env_step_counter: 0
+  last_frame_time: 0.0
+  num_bullet_solver_iterations: 300
+  action_bound: 1
+  last_base_position: [0, 0, 0]
+  observation: []
+  num_substeps: 5
+  num_motors: 12
+  motor_angle_observation_index: 0
+  action_eps: 0.02
+  observation_eps: 0.02
+  render_height: 720
+  render_width: 960
   randomizer:
     ## relative range.
     base_mass_error_range: [-0.2, 0.2] # -/+20%
