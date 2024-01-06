@@ -42,13 +42,14 @@ environment:
   last_frame_time: 0.0
   num_bullet_solver_iterations: 300
   action_bound: 1
+  action_eps: 0.02
+  action_dim: 12
   env_step_counter: 0
   last_base_position: [0, 0, 0]
   observation: []
   num_substeps: 5
   num_motors: 12
   motor_angle_observation_index: 0
-  action_eps: 0.02
   observation_eps: 0.02
   render_height: 720
   render_width: 960

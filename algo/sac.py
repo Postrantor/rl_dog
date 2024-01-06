@@ -45,11 +45,9 @@ class SAC2Agent:
 
     try:
       action_dim = env.action_space.shape[0]
-    except IndexError:
-      action_dim = env.action_space.n
-    try:
       observation_dim = env.observation_space.shape[0]
     except IndexError:
+      action_dim = env.action_space.n
       observation_dim = env.observation_space.n
 
     self.device = "cuda" if torch.cuda.is_available() else "cpu"
