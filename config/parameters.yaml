@@ -34,12 +34,10 @@ environment:
   motor_overheat_protection: False # 是否关闭已施加大力矩(OVERHEAT_SHUTDOWN_TORQUE)的电机，以防止过热(OVERHEAT_SHUTDOWN_TIME)。有关更多详细信息，请参见minitaur.py中的ApplyAction()函数。
   hard_reset: True # 是否在重置时清除仿真并加载所有内容。如果设置为false，则重置只是将model放回起始位置并将其姿势设为初始配置。
   on_rack: False # 是否将model放在架子上。这仅用于调试行走步态。在此模式下，model的基座悬挂在半空中，以便更清晰地可视化其步态。
-  render: True # 是否渲染仿真
   time_step: 0.01
   cam_dist: 1.0
   cam_yaw: 0
   cam_pitch: -30
-  last_frame_time: 0.0
   num_bullet_solver_iterations: 300
   action_bound: 1
   action_eps: 0.02
@@ -51,8 +49,7 @@ environment:
   num_motors: 12
   motor_angle_observation_index: 0
   observation_eps: 0.02
-  render_height: 720
-  render_width: 960
+  use_render: True # 是否渲染仿真
   randomizer:
     ## relative range.
     base_mass_error_range: [-0.2, 0.2] # -/+20%

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This file implements the gym environment of mdoger7.
+this file implements the gym environment of mdoger7.
 """
 
 import math
@@ -62,15 +62,10 @@ class BulletEnv(Env, Robot):
   """
 
   _already_init = False
+  _last_frame_time = 0.0
 
   def __init__(self, params_list):
     self.params_list = params_list
-
-    # set render param, and get bullet client
-    self._is_render = params_list['render']
-    self._render_height = params_list['render_height']
-    self._render_width = params_list['render_width']
-    self._init_bullet_cli()
 
     self._urdf_env = params_list['urdf_env'][1]
     self._env_randomizer = EnvRandomizer(params_list['randomizer'])
@@ -80,7 +75,6 @@ class BulletEnv(Env, Robot):
     self._cam_yaw = params_list['cam_yaw']
     self._cam_pitch = params_list['cam_pitch']
     self._env_step_counter = params_list['env_step_counter']
-    self._last_frame_time = params_list['last_frame_time']
     self._num_bullet_solver_iterations = params_list['num_bullet_solver_iterations']
     self._action_bound = params_list['action_bound']
     self._action_dim = params_list['action_dim']
@@ -118,24 +112,53 @@ class BulletEnv(Env, Robot):
       self._num_bullet_solver_iterations /= self.num_substeps
       self._action_repeat *= self.num_substeps
 
-    # 这两个参数用于初始化神经网络
+    # init env render
+    self._bullet_cli = self._init_bullet_cli(params_list['use_render'])
     self.seed()
     self.reset()
+    self._render_env(self._bullet_cli)
+
+    # 这两个参数用于初始化神经网络
     action_high = np.array([self._action_bound] * self._action_dim)
     self.action_space = spaces.Box(-action_high, action_high, dtype=np.float32)
     observation_high = (self.robot.get_observation_upper_bound() + self.observation_eps)
     observation_low = (self.robot.get_observation_lower_bound() - self.observation_eps)
     self.observation_space = spaces.Box(observation_low, observation_high, dtype=np.float32)
 
-  def _init_bullet_cli(self):
+  def _init_bullet_cli(self, use_render):
     """
     @brief init bullet client
+      set render param, and get bullet client
     """
-    if self._is_render:
-      self._bullet_cli = bc.BulletClient(connection_mode=pybullet.GUI)
+    if use_render:
+      bullet_cli = bc.BulletClient(connection_mode=pybullet.GUI)
     else:
-      self._bullet_cli = bc.BulletClient()
-    return self._bullet_cli
+      bullet_cli = bc.BulletClient()
+    return bullet_cli
+
+  def _render_env(self, bullet_cli):
+    _width = 960
+    _height = 720
+    _base_pos = self.robot.get_base_position()
+    _view_matrix = bullet_cli.computeViewMatrixFromYawPitchRoll(
+        cameraTargetPosition=_base_pos,
+        distance=self._cam_dist,
+        yaw=self._cam_yaw,
+        pitch=self._cam_pitch,
+        roll=0,
+        upAxisIndex=2)
+    _proj_matrix = bullet_cli.computeProjectionMatrixFOV(
+        fov=60,
+        aspect=float(_width) / _height,
+        nearVal=0.1,
+        farVal=100.0)
+    bullet_cli.getCameraImage(
+        width=_width,
+        height=_height,
+        viewMatrix=_view_matrix,
+        projectionMatrix=_proj_matrix,
+        renderer=pybullet.ER_BULLET_HARDWARE_OPENGL)
+    return bullet_cli
 
   def set_env_randomizer(self, env_randomizer):
     self._env_randomizer = env_randomizer
@@ -192,22 +215,16 @@ class BulletEnv(Env, Robot):
     @return info: A dictionary that stores diagnostic information.
     @raise ValueError: The action dimension is not the same as the number of motors.
     @raise ValueError: The magnitude of actions is out of bounds.
+    @param _last_frame_time: 全局变量，仅供该函数使用
     """
-    if self._is_render:
-      # sleep, otherwise the computation takes less time than real time,
-      # which will make the visualization like a fast-forward video.
-      time_spent = time.time() - self._last_frame_time
-      self._last_frame_time = time.time()
-      time_to_sleep = self._action_repeat * self._time_step - time_spent
-      if time_to_sleep > 0:
-        time.sleep(time_to_sleep)
+    self.__nice_visualization_for_render()
 
-      base_pos = self.robot.get_base_position()
-      camInfo = self._bullet_cli.getDebugVisualizerCamera()
-      distance = camInfo[10]
-      yaw = camInfo[8]
-      pitch = camInfo[9]
-      self._bullet_cli.resetDebugVisualizerCamera(distance, yaw, pitch, base_pos)
+    base_pos = self.robot.get_base_position()
+    camInfo = self._bullet_cli.getDebugVisualizerCamera()
+    distance = camInfo[10]
+    yaw = camInfo[8]
+    pitch = camInfo[9]
+    self._bullet_cli.resetDebugVisualizerCamera(distance, yaw, pitch, base_pos)
 
     action = self._transform_action_to_motor_command(action)
     for _ in range(self._action_repeat):
@@ -218,35 +235,6 @@ class BulletEnv(Env, Robot):
     reward = self._reward()
     done = self._termination()
     return np.array(self._noisy_observation()), reward, done, {}
-
-  def render(self, mode="rgb_array"):
-    """
-    @note 这个函数目前为止没有使用，后续考虑添加上？
-    """
-    if mode != "rgb_array":
-      return np.array([])
-    base_pos = self.robot.get_base_position()
-    view_matrix = self._bullet_cli.computeViewMatrixFromYawPitchRoll(
-        cameraTargetPosition=base_pos,
-        distance=self._cam_dist,
-        yaw=self._cam_yaw,
-        pitch=self._cam_pitch,
-        roll=0,
-        upAxisIndex=2)
-    proj_matrix = self._bullet_cli.computeProjectionMatrixFOV(
-        fov=60,
-        aspect=float(self._render_width) / self._render_height,
-        nearVal=0.1,
-        farVal=100.0)
-    (_, _, px, _, _) = self._bullet_cli.getCameraImage(
-        width=self._render_width,
-        height=self._render_height,
-        viewMatrix=view_matrix,
-        projectionMatrix=proj_matrix,
-        renderer=pybullet.ER_BULLET_HARDWARE_OPENGL)
-    rgb_array = np.array(px)
-    rgb_array = rgb_array[:, :, :3]
-    return rgb_array
 
   def get_motor_angles(self):
     """
@@ -401,8 +389,21 @@ class BulletEnv(Env, Robot):
       action = self.robot.convert_from_leg_model(action)
     return action
 
-  if importlib_metadata.version('gym') < "0.9.6":
-    _render = render
-    _reset = reset
-    _seed = seed
-    _step = step
+  # if importlib_metadata.version('gym') < "0.9.6":
+  #   _render = render
+  #   _reset = reset
+  #   _seed = seed
+  #   _step = step
+
+  ## for render
+  def __nice_visualization_for_render(self):
+    """
+    FIXME(zhiqi.jia): 不判断是否渲染(render)，直接使用sleep，可避免对_use_render的使用
+    """
+    # sleep, otherwise the computation takes less time than real time,
+    # which will make the visualization like a fast-forward video.
+    time_spent = time.time() - self._last_frame_time
+    self._last_frame_time = time.time()
+    time_to_sleep = self._action_repeat * self._time_step - time_spent
+    if time_to_sleep > 0:
+      time.sleep(time_to_sleep)
