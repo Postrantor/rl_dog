@@ -18,23 +18,23 @@ from pybullet_envs.bullet.env_randomizer_base import EnvRandomizerBase
 
 class EnvRandomizer(EnvRandomizerBase):
   """
-  @brief 一个在每次重置时改变 gym 的随机器。
+  @brief 重置时改变 gym 的随机器。
   """
 
   def __init__(self, params_list):
-    self._base_mass_err = params_list['base_mass_error_range'] # -/+20%
-    self._leg_mass_err = params_list['leg_mass_error_range'] # -/+20%
-    self._batt_volt = params_list['battery_voltage_range'] # unit: volt
-    self._viscous_damping = params_list['motor_viscous_damping_range'] # N·m·s/rad (转矩/角速度)
     self._leg_friction = params_list['leg_friction'] # 摩擦系数
+    self._batt_volt = params_list['battery_voltage_range'] # unit: volt
+    self._leg_mass_err = params_list['leg_mass_error_range'] # -/+20%
+    self._base_mass_err = params_list['base_mass_error_range'] # -/+20%
+    self._viscous_damping = params_list['motor_viscous_damping_range'] # N·m·s/rad (转矩/角速度)
 
   def randomize_env(self, robot):
     """
     @brief: 随机改变模型的各种物理属性
-          它在每次环境重置时随机化基座、腿部的质量/惯性、足部的摩擦系数、电池电压和电机阻尼.
+          在每次环境重置时随机化基座、腿部的质量/惯性、足部的摩擦系数、电池电压和电机阻尼.
     @param: robot: 位于随机环境中的robot实例.
     """
-    # 这种直接传入robot，然后设置的方式？不太好吧，感觉有些别扭
+    # 直接传入robot？
     body_mass_base = robot.get_base_mass_from_urdf()
     body_mass = uniform(
         body_mass_base * (1.0 + self._base_mass_err[0]),
@@ -57,13 +57,8 @@ from env.robot_model import Robot
 class BulletEnv(Env, Robot):
   """
   @brief The gym environment for the robot.
-
-  It simulates the locomotion of a robot, a quadruped robot. The state space
-  include the angles, velocities and torques for all the motors and the action
-  space is the desired motor angle for each motor. The reward function is based
-  on how far the robot walks in 1000 steps and penalizes the energy
-  expenditure.
-  > 它模拟四足机器人的运动。状态空间包括所有电机和动作的角度、速度和扭矩space 是每个电机所需的电机角度。奖励函数基于 mdoger7 在 1000 步中行走多远并惩罚能量支出。
+    It simulates the locomotion of a robot, a quadruped robot. The state space include the angles, velocities and torques for all the motors and the action space is the desired motor angle for each motor. The reward function is based on how far the robot walks in 1000 steps and penalizes the energy expenditure.
+    > 模拟四足机器人的运动。状态空间包括所有电机和动作的角度、速度和扭矩space 是每个电机所需的电机角度。奖励函数基于 ROBOT 在 1000 步中行走多远并惩罚能量支出。
   """
 
   _already_init = False
@@ -246,52 +241,44 @@ class BulletEnv(Env, Robot):
     return rgb_array
 
   def get_motor_angles(self):
-    """Get the mdoger7's motor angles.
-
-    Returns:
-      A numpy array of motor angles.
+    """
+    @brief get the robot's motor angles.
+    @a numpy array of motor angles.
     """
     return np.array(self._observation[
         self.motor_angle_observation_index:self.motor_angle_observation_index +
         self.num_motors])
 
   def get_motor_velocities(self):
-    """Get the mdoger7's motor velocities.
-
-    Returns:
-      A numpy array of motor velocities.
+    """
+    @brief get the robot's motor velocities.
+    @return a numpy array of motor velocities.
     """
     return np.array(self._observation[
         self.motor_velocity_observation_index:self.motor_velocity_observation_index +
         self.num_motors])
 
   def get_motor_torques(self):
-    """Get the mdoger7's motor torques.
-
-    Returns:
-      A numpy array of motor torques.
+    """
+    @brief get the robot's motor torques.
+    @return a numpy array of motor torques.
     """
     return np.array(self._observation[
         self.motor_torque_observation_index:self.motor_torque_observation_index +
         self.num_motors])
 
   def get_base_orientation(self):
-    """Get the mdoger7's base orientation, represented by a quaternion.
-
-    Returns:
-      A numpy array of mdoger7's orientation.
+    """
+    @brief get the robot's base orientation, represented by a quaternion.
+    @return a numpy array of robot's orientation.
     """
     return np.array(self._observation[self.base_orientation_observation_index:])
 
   def is_fallen(self):
-    """Decide whether the mdoger7 has fallen.
-
-    If the up directions between the base and the world is larger (the dot
-    product is smaller than 0.85) or the base is very low on the ground
-    (the height is smaller than 0.13 meter), the mdoger7 is considered fallen.
-
-    Returns:
-      Boolean value that indicates whether the mdoger7 has fallen.
+    """
+    @brief decide whether the robot has fallen.
+      if the up directions between the base and the world is larger (the dot product is smaller than 0.85) or the base is very low on the ground (the height is smaller than 0.13 meter), the robot is considered fallen.
+    @return boolean value that indicates whether the robot has fallen.
     """
     orientation = self.robot.get_base_orientation()
     position = self.robot.get_base_position()
@@ -304,9 +291,12 @@ class BulletEnv(Env, Robot):
     roll = math.atan2(rot_mat[7], rot_mat[8])
     pitch = math.asin(-rot_mat[6])
     # yaw = math.atan2(rot_mat[3], rot_mat[0])
-    return np.dot(np.asarray([0, 0, 1]),
-                  np.asarray(local_up)) < 0.85 or abs(roll) > 0.1 or abs(
-                      pitch) > 0.2 or abs(pitch) > 0.1 or position[2] < 0.25
+    return (np.dot(np.asarray([0, 0, 1]), np.asarray(local_up))
+                  < 0.85
+                  or abs(roll) > 0.1
+                  or abs(pitch) > 0.2
+                  or abs(pitch) > 0.1
+                  or position[2] < 0.25)
 
     # return (abs(roll) > 0.174 or abs(pitch) > 0.174 or abs(yaw) > 0.174 or pos[2] < 0.25)
     # return (np.dot(np.asarray([1, 0, 0]), np.asarray(local_up_x)) > 0.985 or np.dot(np.asarray([0, 1, 0]), np.asarray(local_up_y)) > 0.9397 or np.dot(np.asarray([0, 0, 1]), np.asarray(local_up_z)) > 0.9397 or pos[2] < 0.3)
@@ -357,19 +347,18 @@ class BulletEnv(Env, Robot):
     # shake_reward = -(20*(current_base_position[2] - 0.35)**2)
     rot_matrix = pybullet.getMatrixFromQuaternion(orientation)
     local_up_vec = rot_matrix[6:]
-    shake_reward = -abs(np.dot(np.asarray([1, 1, 0]),
-                               np.asarray(local_up_vec)))
+    shake_reward = -abs(np.dot(np.asarray([1, 1, 0]), np.asarray(local_up_vec)))
     self._last_base_position = current_base_position
 
-    energy_reward = np.abs(
-        np.dot(self.robot.get_motor_torques(),
-               self.robot.get_motor_velocities())) * self._time_step
+    energy_reward = np.abs(np.dot(self.robot.get_motor_torques(),
+                              self.robot.get_motor_velocities())) * self._time_step
     reward = (self._distance_weight * forward_reward -
               self._energy_weight * energy_reward +
               self._drift_weight * drift_reward +
               self._shake_weight * shake_reward + 10 * xy_velocity_reward +
               10 * yaw_rate_reward + 50 * height_reward
-              )  #+ self.mdoger7.CheckJointContact()
+              )
+    # + self.mdoger7.CheckJointContact()
     self._objectives.append([
         forward_reward,
         energy_reward,
@@ -389,18 +378,18 @@ class BulletEnv(Env, Robot):
     self._get_observation()
     observation = np.array(self._observation)
     if self._observation_noise_stdev > 0:
-      observation += (np.random.normal(scale=self._observation_noise_stdev,
-                                       size=observation.shape) *
-                      self.robot.get_observation_upper_bound())
+      observation += (np.random.normal(
+                      scale=self._observation_noise_stdev,
+                      size=observation.shape) * self.robot.get_observation_upper_bound())
     return observation
 
   def _transform_action_to_motor_command(self, action):
     if self._leg_model_enabled:
       for i, action_component in enumerate(action):
-        if not (-self._action_bound - self.action_eps <= action_component <=
-                self._action_bound + self.action_eps):
-          raise ValueError("{}th action {} out of bounds.".format(
-              i, action_component))
+        if not (-self._action_bound - self.action_eps
+                <= action_component
+                <= self._action_bound + self.action_eps):
+          raise ValueError("{}th action {} out of bounds.".format(i, action_component))
       action = self.robot.convert_from_leg_model(action)
     return action
 
