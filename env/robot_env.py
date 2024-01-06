@@ -66,13 +66,11 @@ class BulletEnv(Env, Robot):
   def __init__(self, params_list):
     self.params_list = params_list
 
-    self._is_render = params_list['render']  # 是否渲染仿真
-    if self._is_render:
-      self._bullet_cli = bc.BulletClient(connection_mode=pybullet.GUI)
-    else:
-      self._bullet_cli = bc.BulletClient()
+    # set render param, and get bullet client
+    self._is_render = params_list['render']
     self._render_height = params_list['render_height']
     self._render_width = params_list['render_width']
+    self._init_bullet_cli()
 
     self._urdf_env = params_list['urdf_env'][1]
     self._env_randomizer = EnvRandomizer(params_list['randomizer'])
@@ -128,6 +126,16 @@ class BulletEnv(Env, Robot):
     observation_high = (self.robot.get_observation_upper_bound() + self.observation_eps)
     observation_low = (self.robot.get_observation_lower_bound() - self.observation_eps)
     self.observation_space = spaces.Box(observation_low, observation_high, dtype=np.float32)
+
+  def _init_bullet_cli(self):
+    """
+    @brief init bullet client
+    """
+    if self._is_render:
+      self._bullet_cli = bc.BulletClient(connection_mode=pybullet.GUI)
+    else:
+      self._bullet_cli = bc.BulletClient()
+    return self._bullet_cli
 
   def set_env_randomizer(self, env_randomizer):
     self._env_randomizer = env_randomizer
