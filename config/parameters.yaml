@@ -42,8 +42,8 @@ environment:
   action_bound: 1
   action_eps: 0.02
   action_dim: 12
-  env_step_counter: 0
-  last_base_position: [0, 0, 0]
+  # env_step_counter: 0
+  # last_base_position: [0, 0, 0]
   observation: []
   num_substeps: 5
   num_motors: 12

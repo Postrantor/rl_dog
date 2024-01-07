@@ -12,7 +12,7 @@ from env.motor import MotorModel
 
 class Robot(MotorModel):
   """
-  The robot class that simulates a quadruped robot from Ghost Robotics.
+  the robot class that simulates a quadruped robot from ghost robotics.
   """
 
   def __init__(self, params_list, bullet_cli):
@@ -34,7 +34,7 @@ class Robot(MotorModel):
     @param kd_for_pd_controllers: kd value for the pd controllers of the motors.
     """
     # 通过一个get_()获取？
-    self._pybullet_client = bullet_cli
+    self._bullet_cli = bullet_cli
 
     self.parameters_list = params_list
     self.num_motors = params_list['num_motors']
@@ -67,7 +67,7 @@ class Robot(MotorModel):
 
     self._urdf_env = params_list['urdf_env'][1]
     self._urdf_robot = params_list['urdf_env'][0]
-    self.ground_id = self._pybullet_client.loadURDF("%s/plane.urdf" % self._urdf_env)
+    self.ground_id = self._bullet_cli.loadURDF("%s/plane.urdf" % self._urdf_env)
 
     self.overheat_shutdown_torque = params_list['overheat_shutdown_torque']
     self.overheat_shutdown_time = params_list['overheat_shutdown_time']
@@ -92,21 +92,21 @@ class Robot(MotorModel):
         self._default_hip_angle,
         self._default_knee_angle]
 
-    self.Reset()
+    self.reset()
 
   def _record_mass_info_from_urdf(self):
-    self._base_mass_urdf = self._pybullet_client.getDynamicsInfo(
+    self._base_mass_urdf = self._bullet_cli.getDynamicsInfo(
         self.quadruped, self.base_link_id)[0]
     # 先清空，再get?
     self._leg_masses_urdf = []
     self._leg_masses_urdf.append(
-        self._pybullet_client.getDynamicsInfo(self.quadruped, self.motor_link_id[0])[0])
+        self._bullet_cli.getDynamicsInfo(self.quadruped, self.motor_link_id[0])[0])
 
   def _build_joint_name2id_dict(self):
-    num_joints = self._pybullet_client.getNumJoints(self.quadruped)
+    num_joints = self._bullet_cli.getNumJoints(self.quadruped)
     self._joint_name_to_id = {}
     for i in range(num_joints):
-      joint_info = self._pybullet_client.getJointInfo(self.quadruped, i)
+      joint_info = self._bullet_cli.getJointInfo(self.quadruped, i)
       self._joint_name_to_id[joint_info[1].decode("UTF-8")] = joint_info[0]
 
   def _build_motor_id_list(self):
@@ -117,17 +117,17 @@ class Robot(MotorModel):
   def _set_motor_torque_by_id(self, motor_id, torque, enable=1):
     if not enable:
       torque = 0
-    self._pybullet_client.setJointMotorControl2(
+    self._bullet_cli.setJointMotorControl2(
         bodyIndex=self.quadruped,
         jointIndex=motor_id,
-        controlMode=self._pybullet_client.TORQUE_CONTROL,
+        controlMode=self._bullet_cli.TORQUE_CONTROL,
         force=torque)
 
   def _set_desired_motor_angle_by_id(self, motor_id, desired_angle):
-    self._pybullet_client.setJointMotorControl2(
+    self._bullet_cli.setJointMotorControl2(
         bodyIndex=self.quadruped,
         jointIndex=motor_id,
-        controlMode=self._pybullet_client.POSITION_CONTROL,
+        controlMode=self._bullet_cli.POSITION_CONTROL,
         targetPosition=desired_angle,
         positionGain=self._kp,
         velocityGain=self._kd,
@@ -137,7 +137,7 @@ class Robot(MotorModel):
     self._set_desired_motor_angle_by_id(self._joint_name_to_id[motor_name],
                                    desired_angle)
 
-  def Reset(self, reload_urdf=True):
+  def reset(self, reload_urdf=True):
     """
     @brief: reset the mdoger7 to its initial states.
     @param: reload_urdf: whether to reload the urdf file.
@@ -145,14 +145,14 @@ class Robot(MotorModel):
 
     if reload_urdf:
       if self._self_collision_enabled:
-        self.quadruped = self._pybullet_client.loadURDF(
+        self.quadruped = self._bullet_cli.loadURDF(
             self._urdf_robot,
             self.init_position,
             self.init_orientation,
             useFixedBase=self._on_rack,
-            flags=self._pybullet_client.URDF_USE_SELF_COLLISION)
+            flags=self._bullet_cli.URDF_USE_SELF_COLLISION)
       else:
-        self.quadruped = self._pybullet_client.loadURDF(
+        self.quadruped = self._bullet_cli.loadURDF(
             self._urdf_robot,
             self.init_position,
             self.init_orientation,
@@ -170,9 +170,9 @@ class Robot(MotorModel):
     #   self._pybullet_client.resetBaseVelocity(self.quadruped, [0, 0, 0], [0, 0, 0])
     # self.ResetPose(add_constraint=False)
     else:
-      self._pybullet_client.resetBasePositionAndOrientation(
+      self._bullet_cli.resetBasePositionAndOrientation(
           self.quadruped, self.init_position, self.init_orientation)
-      self._pybullet_client.resetBaseVelocity(self.quadruped, [0, 0, 0], [0, 0, 0])
+      self._bullet_cli.resetBaseVelocity(self.quadruped, [0, 0, 0], [0, 0, 0])
       self.reset_pose()
     self._overheat_counter = np.zeros(self.num_motors)
     self._motor_enabled_list = [True] * self.num_motors
@@ -206,16 +206,16 @@ class Robot(MotorModel):
     # delete add_constraint
     for name, i in zip(self.motor_names, range(len(self.motor_names))):
       angle = self.init_motor_angles[i]
-      self._pybullet_client.resetJointState(self.quadruped,
+      self._bullet_cli.resetJointState(self.quadruped,
                                   self._joint_name_to_id[name],
                                   angle,
                                   targetVelocity=0)
     for name in self._joint_name_to_id:
       joint_id = self._joint_name_to_id[name]
-      self._pybullet_client.setJointMotorControl2(
+      self._bullet_cli.setJointMotorControl2(
           bodyIndex=self.quadruped,
           jointIndex=(joint_id),
-          controlMode=self._pybullet_client.VELOCITY_CONTROL,
+          controlMode=self._bullet_cli.VELOCITY_CONTROL,
           targetVelocity=0,
           force=0)
 
@@ -266,7 +266,7 @@ class Robot(MotorModel):
     # 转换为连杆 ID
     motor_joint_ids = [self._joint_name_to_id[name] for name in link_names]
     # 获取所有接触点
-    contact_points = self._pybullet_client.getContactPoints(
+    contact_points = self._bullet_cli.getContactPoints(
         bodyA=self.ground_id,
         bodyB=self.quadruped)
     # 检查接触
@@ -281,7 +281,7 @@ class Robot(MotorModel):
     @brief get the position of mdoger7's base.
     @return: the position of mdoger7's base.
     """
-    position, _ = (self._pybullet_client.getBasePositionAndOrientation(self.quadruped))
+    position, _ = (self._bullet_cli.getBasePositionAndOrientation(self.quadruped))
     return position
 
   def get_base_orientation(self):
@@ -289,7 +289,7 @@ class Robot(MotorModel):
     @brief get the orientation of mdoger7's base, represented as quaternion.
     @return: the orientation of mdoger7's base.
     """
-    _, orientation = (self._pybullet_client.getBasePositionAndOrientation(self.quadruped))
+    _, orientation = (self._bullet_cli.getBasePositionAndOrientation(self.quadruped))
     return orientation
 
   def get_base_velocity(self):
@@ -300,7 +300,7 @@ class Robot(MotorModel):
       - the xy velocity of mdoger7's base.
       - the yaw rate (rotational velocity around z-axis) of mdoger7's base.
     """
-    linear_velocity, angular_velocity = self._pybullet_client.getBaseVelocity(self.quadruped)
+    linear_velocity, angular_velocity = self._bullet_cli.getBaseVelocity(self.quadruped)
     xy_velocity = np.array(linear_velocity[:2])  # Take only the X and Y components
     yaw_rate = angular_velocity[2]  # Z-axis component represents yaw rate
     return xy_velocity, yaw_rate
@@ -371,9 +371,9 @@ class Robot(MotorModel):
 
   def apply_action(self, motor_cmds):
     """
-    @brief Set the desired motor angles to the motors of the mdoger.
-      The desired motor angles are clipped based on the maximum allowed velocity. If the pd_control_enabled is True, a torque is calculated according to the difference between current and desired joint angle, as well as the joint velocity. This torque is exerted to the motor. For more information about PD control, please refer to: https://en.wikipedia.org/wiki/PID_controller.
-    @param motor_commands: The 12 desired motor angles.
+    @brief set the desired motor angles to the motors of the mdoger.
+      the desired motor angles are clipped based on the maximum allowed velocity. if the pd_control_enabled is true, a torque is calculated according to the difference between current and desired joint angle, as well as the joint velocity. this torque is exerted to the motor. for more information about pd control, please refer to: https://en.wikipedia.org/wiki/pid_controller.
+    @param motor_commands: the 12 desired motor angles.
     """
     if self._motor_vel_limit < np.inf:
       cur_motor_angle = self.get_motor_angles()
@@ -402,10 +402,9 @@ class Robot(MotorModel):
 
         # Transform into the motor space when applying the torque.
         self._applied_motor_torque = np.multiply(actual_torque, self._motor_direction)
-        for motor_id, motor_torque, motor_enabled in zip(
-            self._motor_id_list,
-            self._applied_motor_torque,
-            self._motor_enabled_list):
+        for motor_id, motor_torque, motor_enabled in zip(self._motor_id_list,
+                                                  self._applied_motor_torque,
+                                                  self._motor_enabled_list):
           self._set_motor_torque_by_id(motor_id, motor_torque, motor_enabled)
       else:
         torque_commands = -self._kp * (q - motor_cmds) - self._kd * qdot
@@ -419,8 +418,7 @@ class Robot(MotorModel):
                                     self._applied_motor_torques):
           self._set_motor_torque_by_id(motor_id, motor_torque)
     else:
-      motor_commands_with_direction = np.multiply(motor_cmds,
-                                                  self._motor_direction)
+      motor_commands_with_direction = np.multiply(motor_cmds, self._motor_direction)
       for motor_id, motor_command_with_direction in zip(
           self._motor_id_list, motor_commands_with_direction):
         self._set_desired_motor_angle_by_id(motor_id, motor_command_with_direction)
@@ -431,7 +429,7 @@ class Robot(MotorModel):
     @return motor angles.
     """
     motor_angles = [
-        self._pybullet_client.getJointState(self.quadruped, motor_id)[0]
+        self._bullet_cli.getJointState(self.quadruped, motor_id)[0]
         for motor_id in self._motor_id_list
     ]
     motor_angles = np.multiply(motor_angles, self._motor_direction)
@@ -443,7 +441,7 @@ class Robot(MotorModel):
     @return velocities of all 12 motors.
     """
     motor_velocities = [
-        self._pybullet_client.getJointState(self.quadruped, motor_id)[1]
+        self._bullet_cli.getJointState(self.quadruped, motor_id)[1]
         for motor_id in self._motor_id_list
     ]
     motor_velocities = np.multiply(motor_velocities, self._motor_direction)
@@ -458,7 +456,7 @@ class Robot(MotorModel):
       return self._observed_motor_torques
     else:
       motor_torques = [
-          self._pybullet_client.getJointState(self.quadruped, motor_id)[3]
+          self._bullet_cli.getJointState(self.quadruped, motor_id)[3]
           for motor_id in self._motor_id_list
       ]
       motor_torques = np.multiply(motor_torques, self._motor_direction)
@@ -508,7 +506,7 @@ class Robot(MotorModel):
     return self._leg_masses_urdf
 
   def set_base_mass(self, base_mass):
-    self._pybullet_client.changeDynamics(self.quadruped,
+    self._bullet_cli.changeDynamics(self.quadruped,
                                   self.base_link_id,
                                   mass=base_mass)
 
@@ -522,7 +520,7 @@ class Robot(MotorModel):
     # for link_id in LEG_LINK_ID:
     #   self._pybullet_client.changeDynamics(self.quadruped, link_id, mass=leg_masses[0])
     for link_id in self.motor_link_id:
-      self._pybullet_client.changeDynamics(self.quadruped,
+      self._bullet_cli.changeDynamics(self.quadruped,
                                     link_id,
                                     mass=leg_masses[0])
 
@@ -532,7 +530,7 @@ class Robot(MotorModel):
     @param foot_friction: The lateral friction coefficient of the foot. This value is shared by all four feet.
     """
     for link_id in self.foot_link_id:
-      self._pybullet_client.changeDynamics(self.quadruped,
+      self._bullet_cli.changeDynamics(self.quadruped,
                                     link_id,
                                     lateralFriction=foot_friction)
 

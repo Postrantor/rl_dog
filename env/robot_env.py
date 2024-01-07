@@ -63,25 +63,46 @@ class BulletEnv(Env, Robot):
 
   _already_init = False
   _last_frame_time = 0.0
+  _env_step_counter = 0
+  _last_base_position = [0, 0, 0]
+  _objectives = []
 
   def __init__(self, params_list):
     self.params_list = params_list
+    self.parser_config(params_list)
+
+    ## init env render
+    self._env_randomizer = self._init_env_randomizer(params_list['randomizer'])
+    self._bullet_cli = self._init_bullet_cli(params_list['use_render'])
+
+    # 是否在重置时清除仿真并加载所有内容。如果设置为false，则重置只是将model放回起始位置并将其姿势设为初始配置。
+    # this assignment need to be after reset()
+    self.seed()
+    self.reset(params_list['hard_reset'])
+    # 这两个参数用于初始化神经网络
+    action_high = np.array([self._action_bound] * self._action_dim)
+    self.action_space = spaces.Box(-action_high, action_high, dtype=np.float32)
+    observation_high = (self.robot.get_observation_upper_bound() + self.observation_eps)
+    observation_low = (self.robot.get_observation_lower_bound() - self.observation_eps)
+    self.observation_space = spaces.Box(observation_low, observation_high, dtype=np.float32)
+
+    self._render_env(self._bullet_cli)
+    ##
+
+  def parser_config(self, params_list):
+    self._robot_params = params_list['robot']
 
     self._urdf_env = params_list['urdf_env'][1]
-    self._env_randomizer = EnvRandomizer(params_list['randomizer'])
 
-    self._time_step = params_list['time_step']
     self._cam_dist = params_list['cam_dist']
     self._cam_yaw = params_list['cam_yaw']
     self._cam_pitch = params_list['cam_pitch']
-    self._env_step_counter = params_list['env_step_counter']
-    self._num_bullet_solver_iterations = params_list['num_bullet_solver_iterations']
+    # self._env_step_counter = params_list['env_step_counter']
+    # self._last_base_position = params_list['last_base_position']
     self._action_bound = params_list['action_bound']
     self._action_dim = params_list['action_dim']
-    self._last_base_position = params_list['last_base_position']
     self._observation = params_list['observation']
 
-    self.num_substeps = params_list['num_substeps']
     self.num_motors = params_list['num_motors']
     self.motor_angle_observation_index = params_list['motor_angle_observation_index']
     self.action_eps = params_list['action_eps']
@@ -90,7 +111,6 @@ class BulletEnv(Env, Robot):
     self.motor_torque_observation_index = self.motor_velocity_observation_index + self.num_motors
     self.base_orientation_observation_index = self.motor_torque_observation_index + self.num_motors
 
-    self._action_repeat = params_list['action_repeat']  # 运动重复的次数
     self._distance_weight = params_list['distance_weight']  # 距离项在奖励中的权重
     self._energy_weight = params_list['energy_weight']  # 能量项在奖励中的权重
     self._drift_weight = params_list['drift_weight']  # 侧向漂移项在奖励中的权重
@@ -100,105 +120,39 @@ class BulletEnv(Env, Robot):
     self._leg_model_enabled = params_list['leg_model_enabled']  # 是否使用腿部马达重新参数化动作空间
     self._torque_control_enabled = params_list['torque_control_enabled']  # 是否使用扭矩控制，否则使用姿态控制
 
-    # 是否在重置时清除仿真并加载所有内容。如果设置为false，则重置只是将model放回起始位置并将其姿势设为初始配置。
-    # This assignment need to be after reset()，是必须要reset()一次？
-    self._hard_reset = params_list['hard_reset']
-
+    self._num_substeps = params_list['num_substeps']
+    self._time_step = params_list['time_step']
+    self._action_repeat = params_list['action_repeat']  # 运动重复的次数
+    self._num_bullet_solver_iterations = params_list['num_bullet_solver_iterations']
     self._pd_control_enabled = params_list['pd_control_enabled'] # 是否为每个马达启用PD控制器
     self._accurate_motor_model_enabled = params_list['accurate_motor_model_enabled'] # 是否使用准确的直流电机模型
     # PD control needs smaller time step for stability.
     if self._pd_control_enabled or self._accurate_motor_model_enabled:
-      self._time_step /= self.num_substeps
-      self._num_bullet_solver_iterations /= self.num_substeps
-      self._action_repeat *= self.num_substeps
+      self._time_step /= self._num_substeps
+      self._num_bullet_solver_iterations /= self._num_substeps
+      self._action_repeat *= self._num_substeps
 
-    # init env render
-    self._bullet_cli = self._init_bullet_cli(params_list['use_render'])
-    self.seed()
-    self.reset()
-    self._render_env(self._bullet_cli)
-
-    # 这两个参数用于初始化神经网络
-    action_high = np.array([self._action_bound] * self._action_dim)
-    self.action_space = spaces.Box(-action_high, action_high, dtype=np.float32)
-    observation_high = (self.robot.get_observation_upper_bound() + self.observation_eps)
-    observation_low = (self.robot.get_observation_lower_bound() - self.observation_eps)
-    self.observation_space = spaces.Box(observation_low, observation_high, dtype=np.float32)
-
-  def _init_bullet_cli(self, use_render):
-    """
-    @brief init bullet client
-      set render param, and get bullet client
-    """
-    if use_render:
-      bullet_cli = bc.BulletClient(connection_mode=pybullet.GUI)
-    else:
-      bullet_cli = bc.BulletClient()
-    return bullet_cli
-
-  def _render_env(self, bullet_cli):
-    _width = 960
-    _height = 720
-    _base_pos = self.robot.get_base_position()
-    _view_matrix = bullet_cli.computeViewMatrixFromYawPitchRoll(
-        cameraTargetPosition=_base_pos,
-        distance=self._cam_dist,
-        yaw=self._cam_yaw,
-        pitch=self._cam_pitch,
-        roll=0,
-        upAxisIndex=2)
-    _proj_matrix = bullet_cli.computeProjectionMatrixFOV(
-        fov=60,
-        aspect=float(_width) / _height,
-        nearVal=0.1,
-        farVal=100.0)
-    bullet_cli.getCameraImage(
-        width=_width,
-        height=_height,
-        viewMatrix=_view_matrix,
-        projectionMatrix=_proj_matrix,
-        renderer=pybullet.ER_BULLET_HARDWARE_OPENGL)
-    return bullet_cli
-
-  def set_env_randomizer(self, env_randomizer):
-    self._env_randomizer = env_randomizer
-
-  def configure(self, args):
-    self._args = args
-
-  def reset(self):
+  def reset(self, hard_reset=True):
     # 必须在init()逻辑中执行一次
-    if self._hard_reset or (not self._already_init):
-      self._bullet_cli.resetSimulation()
-      self._bullet_cli.setPhysicsEngineParameter(numSolverIterations=int(self._num_bullet_solver_iterations))
-      self._bullet_cli.setTimeStep(self._time_step)
-      plane = self._bullet_cli.loadURDF("%s/plane.urdf" % self._urdf_env)
-      self._bullet_cli.changeVisualShape(plane, -1, rgbaColor=[1, 1, 1, 0.9])
-      self._bullet_cli.configureDebugVisualizer(self._bullet_cli.COV_ENABLE_PLANAR_REFLECTION, 0)
-      self._bullet_cli.setGravity(0, 0, -10)
-      self.robot = Robot(self.params_list['robot'], bullet_cli=self._bullet_cli)
+    if hard_reset or (not self._already_init):
+      self.robot = Robot(self._robot_params,
+                      bullet_cli=self._reset_bullet_cli(self._bullet_cli))
     else:
-      self.robot.Reset(reload_urdf=False)
+      self.robot.reset(reload_urdf=False)
 
-    if self._env_randomizer is not None:
-      self._env_randomizer.randomize_env(self.robot)
+    # FIXME(@zhiqi.jia): 在_init_逻辑中初始化完
+    self._env_randomizer.randomize_env(self.robot)
 
-    self._env_step_counter = self.params_list['env_step_counter'] # 0
-    self._last_base_position = self.params_list['last_base_position'] # [0, 0, 0]
-    self._objectives = []
-
-    self._bullet_cli.resetDebugVisualizerCamera(self._cam_dist,
-                                      self._cam_yaw,
-                                      self._cam_pitch,
-                                      [0, 0, 0])
+    self._reset_env_status()
 
     if not self._torque_control_enabled:
-      for _ in range(100):
-        if self._pd_control_enabled or self._accurate_motor_model_enabled:
-          self.robot.apply_action([math.pi] * 12)
-        self._bullet_cli.stepSimulation()
-    # set status
+      # FIXME(@zhiqi.jia): remove for-loop(100)
+      if self._pd_control_enabled or self._accurate_motor_model_enabled:
+        self.robot.apply_action([math.pi] * 12)
+      self._bullet_cli.stepSimulation()
+
     self._already_init = True
+
     return self._noisy_observation()
 
   def seed(self, seed=None):
@@ -207,17 +161,17 @@ class BulletEnv(Env, Robot):
 
   def step(self, action):
     """
-    @brief Step forward the simulation, given the action.
-    @param action: A list of desired motor angles for 12 motors.
-    @return observations: The angles, velocities and torques of all motors.
-    @return reward: The reward for the current state-action pair.
-    @return done: Whether the episode has ended.
-    @return info: A dictionary that stores diagnostic information.
-    @raise ValueError: The action dimension is not the same as the number of motors.
-    @raise ValueError: The magnitude of actions is out of bounds.
+    @brief step forward the simulation, given the action.
+    @param action: a list of desired motor angles for 12 motors.
+    @return observations: the angles, velocities and torques of all motors.
+    @return reward: the reward for the current state-action pair.
+    @return done: whether the episode has ended.
+    @return info: a dictionary that stores diagnostic information.
+    @raise valueerror: the action dimension is not the same as the number of motors.
+    @raise valueerror: the magnitude of actions is out of bounds.
     @param _last_frame_time: 全局变量，仅供该函数使用
     """
-    self.__nice_visualization_for_render()
+    self._nice_visualization_for_render()
 
     base_pos = self.robot.get_base_position()
     camInfo = self._bullet_cli.getDebugVisualizerCamera()
@@ -395,8 +349,64 @@ class BulletEnv(Env, Robot):
   #   _seed = seed
   #   _step = step
 
+  ## for env
+  def _init_env_randomizer(self, env_randomizer):
+    return EnvRandomizer(env_randomizer)
+
   ## for render
-  def __nice_visualization_for_render(self):
+  def _init_bullet_cli(self, use_render):
+    """
+    @brief init bullet client
+      set render param, and get bullet client
+    """
+    if use_render:
+      bullet_cli = bc.BulletClient(connection_mode=pybullet.GUI)
+    else:
+      bullet_cli = bc.BulletClient()
+    return bullet_cli
+
+  def _reset_bullet_cli(self, bullet_cli):
+    bullet_cli.resetSimulation()
+    bullet_cli.setPhysicsEngineParameter(numSolverIterations=int(self._num_bullet_solver_iterations))
+    bullet_cli.setTimeStep(self._time_step)
+    plane = bullet_cli.loadURDF("%s/plane.urdf" % self._urdf_env)
+    bullet_cli.changeVisualShape(plane, -1, rgbaColor=[1, 1, 1, 0.9])
+    bullet_cli.configureDebugVisualizer(bullet_cli.COV_ENABLE_PLANAR_REFLECTION, 0)
+    bullet_cli.setGravity(0, 0, -10)
+    bullet_cli.resetDebugVisualizerCamera(self._cam_dist, self._cam_yaw, self._cam_pitch, [0, 0, 0])
+
+    return bullet_cli
+
+  def _reset_env_status(self):
+    self._env_step_counter = 0
+    self._last_base_position = [0, 0, 0]
+    self._objectives = []
+
+  def _render_env(self, bullet_cli):
+    _width = 960
+    _height = 720
+    _base_pos = self.robot.get_base_position()
+    _view_matrix = bullet_cli.computeViewMatrixFromYawPitchRoll(
+        cameraTargetPosition=_base_pos,
+        distance=self._cam_dist,
+        yaw=self._cam_yaw,
+        pitch=self._cam_pitch,
+        roll=0,
+        upAxisIndex=2)
+    _proj_matrix = bullet_cli.computeProjectionMatrixFOV(
+        fov=60,
+        aspect=float(_width) / _height,
+        nearVal=0.1,
+        farVal=100.0)
+    bullet_cli.getCameraImage(
+        width=_width,
+        height=_height,
+        viewMatrix=_view_matrix,
+        projectionMatrix=_proj_matrix,
+        renderer=pybullet.ER_BULLET_HARDWARE_OPENGL)
+    return bullet_cli
+
+  def _nice_visualization_for_render(self):
     """
     FIXME(zhiqi.jia): 不判断是否渲染(render)，直接使用sleep，可避免对_use_render的使用
     """

@@ -21,6 +21,3 @@ def algorithm_rl(parameter_list):
 
 if __name__ == "__main__":
   algorithm_rl(load_parameters('config/parameters.yaml'))
-  # param = load_parameters('config/parameters.yaml')
-  # output = param['environment']['randomizer']['base_mass_error_range']
-  # print('path: {0}; path: {1}'.format(output[0], output[1]))
