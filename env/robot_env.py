@@ -216,6 +216,7 @@ class BulletEnv(Env, Robot):
       if the up directions between the base and the world is larger (the dot product is smaller than 0.85) or the base is very low on the ground (the height is smaller than 0.13 meter), the robot is considered fallen.
     @return boolean value that indicates whether the robot has fallen.
     """
+    # FIXME(@zhiqi.jia)
     orientation = self.robot.get_base_orientation()
     position = self.robot.get_base_position()
     rot_mat = self._bullet_cli.getMatrixFromQuaternion(orientation)
@@ -238,13 +239,15 @@ class BulletEnv(Env, Robot):
     # return (np.dot(np.asarray([1, 0, 0]), np.asarray(local_up_x)) > 0.985 or np.dot(np.asarray([0, 1, 0]), np.asarray(local_up_y)) > 0.9397 or np.dot(np.asarray([0, 0, 1]), np.asarray(local_up_z)) > 0.9397 or pos[2] < 0.3)
 
   def get_objectives(self):
+    """[nouse]"""
     return self._objectives
 
   def _termination(self):
     position = self.robot.get_base_position()
     distance = math.sqrt(position[0]**2 + position[1]**2)
-    condition = self.is_fallen() or (distance > self._distance_limit) or (
-        self.robot.check_joint_contact() > 0)
+    condition = (self.is_fallen() or
+              (distance > self._distance_limit) or
+              (self.robot.check_joint_contact() > 0))
     return condition
 
   def _reward(self):
@@ -260,22 +263,21 @@ class BulletEnv(Env, Robot):
     drift_reward = -abs(current_base_position[1])
     height_reward = -(current_base_position[2] - 0.35)**2
     xy_velocity, yaw_rate = self.robot.get_base_velocity()
-    target_xy_velocity = [
-        5, 5
-    ]  # Define these values as per your task requirements
+    # define these values as per your task requirements
+    target_xy_velocity = [5, 5]
 
-    # Calculate the velocity error (Euclidean distance between current velocity and target velocity)
+    # calculate the velocity error (euclidean distance between current velocity and target velocity)
     velocity_error = ((xy_velocity[0] - target_xy_velocity[0])**2 +
-                      (xy_velocity[1] - target_xy_velocity[1])**2)**0.5
+                  (xy_velocity[1] - target_xy_velocity[1])**2)**0.5
     yaw_velocity_error = (yaw_rate - 3)**2
 
-    # Design the XY velocity reward component based on the error
-    some_scale_factor = 0.1  # This is a hyperparameter that you can tune
+    # design the xy velocity reward component based on the error
+    some_scale_factor = 0.1  # this is a hyperparameter that you can tune
     xy_velocity_reward = math.exp(-velocity_error / some_scale_factor)
     yaw_rate_reward = math.exp(-yaw_velocity_error / 0.1)
     # adjusted_velocity = np.abs((xy_velocity - 5) / 20)
     # adjusted_yaw = np.abs((yaw_rate - 3) / 10)
-    # # Calculate the exponential of the absolute values
+    # calculate the exponential of the absolute values
     # exp_abs_adjusted_velocity = 10*np.exp(adjusted_velocity)
     # exp_abs_adjusted_yaw = 10*np.exp(adjusted_yaw)
     # drift_reward = -abs(current_base_position[1] - self._last_base_position[1])
@@ -292,8 +294,7 @@ class BulletEnv(Env, Robot):
               self._energy_weight * energy_reward +
               self._drift_weight * drift_reward +
               self._shake_weight * shake_reward + 10 * xy_velocity_reward +
-              10 * yaw_rate_reward + 50 * height_reward
-              )
+              10 * yaw_rate_reward + 50 * height_reward)
     # + self.mdoger7.CheckJointContact()
     self._objectives.append([
         forward_reward,
@@ -302,8 +303,7 @@ class BulletEnv(Env, Robot):
         shake_reward,
         xy_velocity_reward,
         yaw_rate_reward,
-        height_reward
-    ])
+        height_reward])
     return reward
 
   def _get_observation(self):
