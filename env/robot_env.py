@@ -69,8 +69,10 @@ class BulletEnv(Env, Robot):
   _observation = []
 
   def __init__(self, params_list):
+    self._check_lib_version()
+
     self.params_list = params_list
-    self.parser_config(params_list)
+    self._parse_config(params_list)
 
     ## init env render
     self._env_randomizer = self._init_env_randomizer(params_list['randomizer'])
@@ -88,8 +90,9 @@ class BulletEnv(Env, Robot):
     self._render_env(self._bullet_cli)
     ##
 
-  def parser_config(self, params_list):
+  def _parse_config(self, params_list):
     self._robot_params = params_list['robot']
+    self._time_step = params_list['robot']['time_step']
 
     self._action_bound = params_list['action_bound']
     self._action_dim = params_list['action_dim']
@@ -112,11 +115,11 @@ class BulletEnv(Env, Robot):
     self._torque_control_enabled = params_list['torque_control_enabled']  # 是否使用扭矩控制，否则使用姿态控制
 
     self._num_substeps = params_list['num_substeps']
-    self._time_step = params_list['time_step']
     self._action_repeat = params_list['action_repeat']  # 运动重复的次数
     self._num_bullet_solver_iterations = params_list['num_bullet_solver_iterations']
-    self._pd_control_enabled = params_list['pd_control_enabled'] # 是否为每个马达启用PD控制器
-    self._accurate_motor_model_enabled = params_list['accurate_motor_model_enabled'] # 是否使用准确的直流电机模型
+
+    self._pd_control_enabled = params_list['robot']['pd_control_enabled'] # 是否为每个马达启用PD控制器
+    self._accurate_motor_model_enabled = params_list['robot']['accurate_motor_model_enabled'] # 是否使用准确的直流电机模型
     # PD control needs smaller time step for stability.
     if self._pd_control_enabled or self._accurate_motor_model_enabled:
       self._time_step /= self._num_substeps
@@ -126,7 +129,7 @@ class BulletEnv(Env, Robot):
   def reset(self, hard_reset=True):
     # 必须在init()逻辑中执行一次
     if hard_reset or (not self._already_init):
-      self.robot = Robot(self._robot_params,
+      self.robot = Robot(params_list=self._robot_params,
                       bullet_cli=self._reset_bullet_cli(self._bullet_cli))
     else:
       self.robot.reset(reload_urdf=False)
@@ -327,11 +330,12 @@ class BulletEnv(Env, Robot):
       action = self.robot.convert_from_leg_model(action)
     return action
 
-  # if importlib_metadata.version('gym') < "0.9.6":
-  #   _render = render
-  #   _reset = reset
-  #   _seed = seed
-  #   _step = step
+
+  def _check_lib_version(self):
+    if (importlib_metadata.version('gym') < "0.9.6"):
+      return True
+    else:
+      return False
 
   ## for env
   def _init_env_randomizer(self, env_randomizer):
@@ -376,8 +380,8 @@ class BulletEnv(Env, Robot):
     self._objectives = []
 
   def _render_env(self, bullet_cli):
-    _width = 960
-    _height = 720
+    _width = 720
+    _height = 540
     _base_pos = self.robot.get_base_position()
     _view_matrix = bullet_cli.computeViewMatrixFromYawPitchRoll(
         cameraTargetPosition=_base_pos,
@@ -401,10 +405,9 @@ class BulletEnv(Env, Robot):
 
   def _nice_visualization_for_render(self):
     """
-    FIXME(zhiqi.jia): 不判断是否渲染(render)，直接使用sleep，可避免对_use_render的使用
+    sleep, otherwise the computation takes less time than real time, which will make the visualization like a fast-forward video.
     """
-    # sleep, otherwise the computation takes less time than real time,
-    # which will make the visualization like a fast-forward video.
+    # FIXME(zhiqi.jia): 不判断是否渲染(render)，直接使用sleep，可避免对_use_render的使用
     time_spent = time.time() - self._last_frame_time
     self._last_frame_time = time.time()
     time_to_sleep = self._action_repeat * self._time_step - time_spent
