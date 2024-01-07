@@ -17,9 +17,6 @@ training:
 
 # The gym environment for the mdoger7.
 environment:
-  urdf_env:
-    - "../mdoger7/urdf/mdoger7.urdf"
-    - "../env/pybullet_data"
   action_repeat: 1 # 运动重复的次数
   distance_weight: 10.0 # 距离项在奖励中的权重
   energy_weight: 0.5 # 能量项在奖励中的权重
@@ -95,7 +92,7 @@ environment:
     lower_constraint_point_right: [0, 0.00, 0.] # [nouse]
     lower_constraint_point_left: [0, 0.0, 0.] # [nouse]
     leg_position: ["lf", "rf", "lb", "rb"]
-    motor_names:
+    link_names:
       [
         "lf1_joint",
         "lf2_joint",
@@ -110,7 +107,6 @@ environment:
         "rb2_joint",
         "rb3_joint",
       ]
-
     motor:
       torque_control_enabled: True
       kp: 2.0 # 准确电机模型的比例增益

@@ -91,8 +91,6 @@ class BulletEnv(Env, Robot):
   def parser_config(self, params_list):
     self._robot_params = params_list['robot']
 
-    self._urdf_env = params_list['urdf_env'][1]
-
     self._action_bound = params_list['action_bound']
     self._action_dim = params_list['action_dim']
 
@@ -359,8 +357,6 @@ class BulletEnv(Env, Robot):
     bullet_cli.resetSimulation()
     bullet_cli.setPhysicsEngineParameter(numSolverIterations=int(self._num_bullet_solver_iterations))
     bullet_cli.setTimeStep(self._time_step)
-    plane = bullet_cli.loadURDF("%s/plane.urdf" % self._urdf_env)
-    bullet_cli.changeVisualShape(plane, -1, rgbaColor=[1, 1, 1, 0.9])
     bullet_cli.configureDebugVisualizer(bullet_cli.COV_ENABLE_PLANAR_REFLECTION, 0)
     bullet_cli.setGravity(0, 0, -10)
     bullet_cli.resetDebugVisualizerCamera(self._cam_dist, self._cam_yaw, self._cam_pitch, [0, 0, 0])

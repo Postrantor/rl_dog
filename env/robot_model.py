@@ -19,7 +19,7 @@ class Robot(MotorModel):
     """
     @brief constructs a robot and reset it to the initial states.
 
-    @param pybullet_client: the instance of bulletclient to manage different simulations.
+    @param pybullet_client: the instance of bullet client to manage different simulations.
     @param urdf_root: the path to the urdf folder.
     @param time_step: the time step of the simulation.
     @param self_collision_enabled: whether to enable self collision.
@@ -33,22 +33,25 @@ class Robot(MotorModel):
     @param on_rack: whether to place the mdoger7 on rack. this is only used to debug the walking gait. in this mode, the mdoger7's base is hanged midair so that its walking gait is clearer to visualize.
     @param kd_for_pd_controllers: kd value for the pd controllers of the motors.
     """
-    # 通过一个get_()获取？
     self._bullet_cli = bullet_cli
 
-    self.parameters_list = params_list
+    self.params_list = params_list
+
+    self.link_names = params_list['link_names']
     self.num_motors = params_list['num_motors']
     self.time_step = params_list['time_step']
+
     self._self_collision_enabled = params_list['self_collision_enabled']
     self._motor_vel_limit = params_list['motor_velocity_limit']
-    self._pd_control_enabled = params_list['pd_control_enabled']
     self._motor_overheat_protection = params_list['motor_overheat_protection']
-    self._on_rack = params_list['on_rack']
     self._motor_direction = params_list['motor_direction']
+    self._pd_control_enabled = params_list['pd_control_enabled']
+    self._on_rack = params_list['on_rack']
     self._h1motor_direction = params_list['h1motor_direction']
     self._h2motor_direction = params_list['h2motor_direction']
     self._h3motor_direction = params_list['h3motor_direction']
     self._max_force = params_list['max_force']
+
     # 这两个实际上应该是输出参数
     self._observed_motor_torques = np.array(params_list['init_observed_motor_torques'])
     self._applied_motor_torques = np.array(params_list['init_applied_motor_torques'])
@@ -67,14 +70,12 @@ class Robot(MotorModel):
 
     self._urdf_env = params_list['urdf_env'][1]
     self._urdf_robot = params_list['urdf_env'][0]
-    self.ground_id = self._bullet_cli.loadURDF("%s/plane.urdf" % self._urdf_env)
 
     self.overheat_shutdown_torque = params_list['overheat_shutdown_torque']
     self.overheat_shutdown_time = params_list['overheat_shutdown_time']
     self.lower_constraint_point_right = params_list['lower_constraint_point_right']
     self.lower_constraint_point_left = params_list['lower_constraint_point_left']
     self.leg_position = params_list['leg_position']
-    self.motor_names = params_list['motor_names']
 
     # bases on the readings from 's default pose.
     self.init_position = params_list['init_position']
@@ -111,7 +112,7 @@ class Robot(MotorModel):
 
   def _build_motor_id_list(self):
     self._motor_id_list = [
-        self._joint_name_to_id[motor_name] for motor_name in self.motor_names
+        self._joint_name_to_id[motor_name] for motor_name in self.link_names
     ]
 
   def _set_motor_torque_by_id(self, motor_id, torque, enable=1):
@@ -139,10 +140,15 @@ class Robot(MotorModel):
 
   def reset(self, reload_urdf=True):
     """
-    @brief: reset the mdoger7 to its initial states.
+    @brief: reset the robot to its initial states.
     @param: reload_urdf: whether to reload the urdf file.
     """
 
+    # load ground
+    self.ground_id = self._bullet_cli.loadURDF("%s/plane.urdf" % self._urdf_env)
+    self._bullet_cli.changeVisualShape(self.ground_id, -1, rgbaColor=[1, 1, 1, 0.9])
+
+    # load robot
     if reload_urdf:
       if self._self_collision_enabled:
         self.quadruped = self._bullet_cli.loadURDF(
@@ -161,55 +167,25 @@ class Robot(MotorModel):
       self._build_motor_id_list()
       self._record_mass_info_from_urdf()
       self.reset_pose()
-    #   if self._on_rack:
-    #     self._pybullet_client.createConstraint(self.quadruped, -1, -1, -1,
-    #                                  self._pybullet_client.JOINT_FIXED, [0, 0, 0],
-    #                                  [0, 0, 0], [0, 0, 1])
-    # else:
-    #   self._pybullet_client.resetBasePositionAndOrientation(self.quadruped, INIT_POSITION, INIT_ORIENTATION)
-    #   self._pybullet_client.resetBaseVelocity(self.quadruped, [0, 0, 0], [0, 0, 0])
-    # self.ResetPose(add_constraint=False)
     else:
-      self._bullet_cli.resetBasePositionAndOrientation(
-          self.quadruped, self.init_position, self.init_orientation)
+      self._bullet_cli.resetBasePositionAndOrientation(self.quadruped,
+                                          self.init_position,
+                                          self.init_orientation)
       self._bullet_cli.resetBaseVelocity(self.quadruped, [0, 0, 0], [0, 0, 0])
       self.reset_pose()
+
     self._overheat_counter = np.zeros(self.num_motors)
     self._motor_enabled_list = [True] * self.num_motors
 
-  # def ResetPose(self, add_constraint):
-  #   for i in range(self.num_legs):
-  #     del add_constraint
-  #     self._ResetPoseForLeg(i, add_constraint)
-
-  # def _ResetPoseForLeg(self, leg_id, add_constraint):
-  #   # del add_constraint
-  #   hip = 0
-  #   upper_leg_angle = 0    #45*math.pi / 180.0
-  #   low_friction_force = 0
-  #   lower_leg_angle = 0     #45*math.pi / 180.0
-  #   self.leg_position = LEG_POSITION[leg_id]
-  #   self._pybullet_client.resetJointState(self.quadruped,
-  #                              self._joint_name_to_id[self.leg_position + str(1)+"_joint"],
-  #                              self._h1motor_direction[leg_id] * hip,
-  #                              targetVelocity=0)
-  #   self._pybullet_client.resetJointState(self.quadruped,
-  #                              self._joint_name_to_id[self.leg_position + str(2)+"_joint"],
-  #                              self._h2motor_direction[leg_id] * upper_leg_angle,
-  #                              targetVelocity=0)
-  #   self._pybullet_client.resetJointState(self.quadruped,
-  #                              self._joint_name_to_id[self.leg_position + str(3)+"_joint"],
-  #                              self._h3motor_direction[leg_id] * lower_leg_angle,
-  #                              targetVelocity=0)
-
+  # FIXME(@zhiqi.jia) need add add_constraint
+  # ~\anaconda3\envs\pytorch\Lib\site-packages\pybullet_envs\bullet\minitaur.py
   def reset_pose(self):
-    # delete add_constraint
-    for name, i in zip(self.motor_names, range(len(self.motor_names))):
+    for name, i in zip(self.link_names, range(len(self.link_names))):
       angle = self.init_motor_angles[i]
       self._bullet_cli.resetJointState(self.quadruped,
-                                  self._joint_name_to_id[name],
-                                  angle,
-                                  targetVelocity=0)
+                              self._joint_name_to_id[name],
+                              angle,
+                              targetVelocity=0)
     for name in self._joint_name_to_id:
       joint_id = self._joint_name_to_id[name]
       self._bullet_cli.setJointMotorControl2(
@@ -219,52 +195,15 @@ class Robot(MotorModel):
           targetVelocity=0,
           force=0)
 
-    # if add_constraint:
-    #   self._pybullet_client.createConstraint(
-    #       self.quadruped, self._joint_name_to_id[self.leg_position + str(3)+"_joint"],
-    #       self.quadruped, self._joint_name_to_id[self.leg_position + str(3)+"_joint"],
-    #       self._pybullet_client.JOINT_POINT2POINT, [0, 0, 0], lower_CONSTRAINT_POINT_RIGHT,
-    #       lower_CONSTRAINT_POINT_LEFT)
-
-    # if self._accurate_motor_model_enabled or self._pd_control_enabled:
-    #   # Disable the default motor in pybullet.
-    #   self._pybullet_client.setJointMotorControl2(
-    #       bodyIndex=self.quadruped,
-    #       jointIndex=(self._joint_name_to_id[self.leg_position + str(1)+"_joint"]),
-    #       controlMode=self._pybullet_client.VELOCITY_CONTROL,
-    #       targetVelocity=0,
-    #       force=low_friction_force)
-
-    # else:
-    #   self._SetDesiredMotorAngleByName(self.leg_position + str(1)+"_joint",
-    #                                    self._h1motor_direction[leg_id] * hip)
-    # self._pybullet_client.setJointMotorControl2(
-    #     bodyIndex=self.quadruped,
-    #     jointIndex=(self._joint_name_to_id[self.leg_position + str(2)+"_joint"]),
-    #     controlMode=self._pybullet_client.VELOCITY_CONTROL,
-    #     targetVelocity=0,
-    #     force=low_friction_force)
-    # self._pybullet_client.setJointMotorControl2(
-    #     bodyIndex=self.quadruped,
-    #     jointIndex=(self._joint_name_to_id[self.leg_position + str(3)+"_joint"]),
-    #     controlMode=self._pybullet_client.VELOCITY_CONTROL,
-    #     targetVelocity=0,
-    #     force=low_friction_force)
-
   def check_joint_contact(self):
     """
-    @brief: 检查指定的连杆是否与地面接触。
-    @return: 表示是否与地面接触。
+    @brief: 检查指定的连杆是否与地面接触
+    @return: 是否与地面接触
     """
-    link_names = [
-        "lf1_joint", "lf2_joint", "lf3_joint", "rf1_joint", "rf2_joint",
-        "rf3_joint", "lb1_joint", "lb2_joint", "lb3_joint", "rb1_joint",
-        "rb2_joint", "rb3_joint"
-    ]
     # 初始化接触检测结果
     collision_count = False
     # 转换为连杆 ID
-    motor_joint_ids = [self._joint_name_to_id[name] for name in link_names]
+    motor_joint_ids = [self._joint_name_to_id[name] for name in self.link_names]
     # 获取所有接触点
     contact_points = self._bullet_cli.getContactPoints(
         bodyA=self.ground_id,
@@ -326,8 +265,8 @@ class Robot(MotorModel):
     # upper_bound[3 * self.num_motors:] = 1.0  # Quaternion of base orientation.
     upper_bound = np.array([0.0] * self.GetObservationDimension())
     upper_bound[0:self.num_motors] = math.pi  # Joint angle.
-    upper_bound[self.num_motors:2 * self.num_motors] = self.parameters_list['motor']['motor_speed_limit'] # Joint velocity.
-    upper_bound[2 * self.num_motors:3 * self.num_motors] = self.parameters_list['motor']['observed_torque_limit']  # Joint torque.
+    upper_bound[self.num_motors:2 * self.num_motors] = self.params_list['motor']['motor_speed_limit'] # Joint velocity.
+    upper_bound[2 * self.num_motors:3 * self.num_motors] = self.params_list['motor']['observed_torque_limit']  # Joint torque.
     upper_bound[3 * self.num_motors:3 * self.num_motors +
                 4] = 1.0  # Quaternion of base orientation.
 
