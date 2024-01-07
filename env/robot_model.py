@@ -36,9 +36,10 @@ class Robot(MotorModel):
     @param kd_for_pd_controllers: kd value for the pd controllers of the motors.
     """
     self._bullet_cli = bullet_cli
+    self._parse_config(params_list)
+    self.reset()
 
-    self.params_list = params_list
-
+  def _parse_config(self, params_list):
     self._on_rack = params_list['on_rack']
     self.link_names = params_list['link_names']
     self.num_motors = params_list['num_motors']
@@ -46,8 +47,10 @@ class Robot(MotorModel):
 
     self.time_step = params_list['time_step']
 
+    self.joint_velocity = params_list['motor']['motor_speed_limit']
+    self.joint_torque = params_list['motor']['observed_torque_limit']
+
     self._self_collision_enabled = params_list['self_collision_enabled']
-    self._motor_vel_limit = params_list['motor_velocity_limit']
     self._motor_overheat_protection = params_list['motor_overheat_protection']
     self._motor_direction = params_list['motor_direction']
     self._pd_control_enabled = params_list['pd_control_enabled']
@@ -56,6 +59,26 @@ class Robot(MotorModel):
     # 这两个实际上应该是输出参数
     self._observed_motor_torques = np.array(params_list['init_observed_motor_torques'])
     self._applied_motor_torques = np.array(params_list['init_applied_motor_torques'])
+
+    self._urdf_env = params_list['urdf_env'][1]
+    self._urdf_robot = params_list['urdf_env'][0]
+
+    self.overheat_shutdown_torque = params_list['overheat_shutdown_torque']
+    self.overheat_shutdown_time = params_list['overheat_shutdown_time']
+    self.lower_constraint_point_right = params_list['lower_constraint_point_right']
+    self.lower_constraint_point_left = params_list['lower_constraint_point_left']
+
+    self.base_link_id = params_list['link_id']['base_link_id']
+    self.foot_link_id = params_list['link_id']['foot_link_id']
+    self.motor_link_id = params_list['link_id']['motor_link_id']
+
+    # bases on the readings from 's default pose.
+    self.init_position = params_list['init_position']
+    self.init_orientation = params_list['init_orientation']
+    self.init_motor_angles = self.num_legs * [
+        params_list['default_abduction_angle'],
+        params_list['default_hip_angle'],
+        params_list['default_knee_angle']]
 
     self._accurate_motor_model_enabled = params_list['accurate_motor_model_enabled']
     if self._accurate_motor_model_enabled:
@@ -69,84 +92,14 @@ class Robot(MotorModel):
       self._kp = 1
       self._kd = 1
 
-    self._urdf_env = params_list['urdf_env'][1]
-    self._urdf_robot = params_list['urdf_env'][0]
-
-    self.overheat_shutdown_torque = params_list['overheat_shutdown_torque']
-    self.overheat_shutdown_time = params_list['overheat_shutdown_time']
-    self.lower_constraint_point_right = params_list['lower_constraint_point_right']
-    self.lower_constraint_point_left = params_list['lower_constraint_point_left']
-
-    # bases on the readings from 's default pose.
-    self.init_position = params_list['init_position']
-    self.init_orientation = params_list['init_orientation']
-    self.base_link_id = params_list['link_id']['base_link_id']
-    self.foot_link_id = params_list['link_id']['foot_link_id']
-    self.motor_link_id = params_list['link_id']['motor_link_id']
-
-    self._default_abduction_angle = params_list['default_abduction_angle']
-    self._default_hip_angle = params_list['default_hip_angle']
-    self._default_knee_angle = params_list['default_knee_angle']
-    self.init_motor_angles = self.num_legs * [
-        self._default_abduction_angle,
-        self._default_hip_angle,
-        self._default_knee_angle]
-
-    self.reset()
-
-  def _record_mass_info_from_urdf(self):
-    self._base_mass_urdf = self._bullet_cli.getDynamicsInfo(
-        self.quadruped, self.base_link_id)[0]
-    # 先清空，再get?
-    self._leg_masses_urdf = []
-    self._leg_masses_urdf.append(
-        self._bullet_cli.getDynamicsInfo(self.quadruped, self.motor_link_id[0])[0])
-
-  def _build_joint_name2id_dict(self):
-    num_joints = self._bullet_cli.getNumJoints(self.quadruped)
-    self._joint_name_to_id = {}
-    for i in range(num_joints):
-      joint_info = self._bullet_cli.getJointInfo(self.quadruped, i)
-      self._joint_name_to_id[joint_info[1].decode("UTF-8")] = joint_info[0]
-
-  def _build_motor_id_list(self):
-    self._motor_id_list = [
-        self._joint_name_to_id[motor_name] for motor_name in self.link_names
-    ]
-
-  def _set_motor_torque_by_id(self, motor_id, torque, enable=1):
-    if not enable:
-      torque = 0
-    self._bullet_cli.setJointMotorControl2(
-        bodyIndex=self.quadruped,
-        jointIndex=motor_id,
-        controlMode=self._bullet_cli.TORQUE_CONTROL,
-        force=torque)
-
-  def _set_desired_motor_angle_by_id(self, motor_id, desired_angle):
-    self._bullet_cli.setJointMotorControl2(
-        bodyIndex=self.quadruped,
-        jointIndex=motor_id,
-        controlMode=self._bullet_cli.POSITION_CONTROL,
-        targetPosition=desired_angle,
-        positionGain=self._kp,
-        velocityGain=self._kd,
-        force=self._max_force)
-
-  def _set_desired_motor_angle_by_name(self, motor_name, desired_angle):
-    self._set_desired_motor_angle_by_id(self._joint_name_to_id[motor_name],
-                                   desired_angle)
-
   def reset(self, reload_urdf=True):
     """
     @brief: reset the robot to its initial states.
     @param: reload_urdf: whether to reload the urdf file.
     """
-
     # load ground
     self.ground_id = self._bullet_cli.loadURDF("%s/plane.urdf" % self._urdf_env)
     self._bullet_cli.changeVisualShape(self.ground_id, -1, rgbaColor=[1, 1, 1, 0.9])
-
     # load robot
     if reload_urdf:
       if self._self_collision_enabled:
@@ -193,6 +146,46 @@ class Robot(MotorModel):
           controlMode=self._bullet_cli.VELOCITY_CONTROL,
           targetVelocity=0,
           force=0)
+
+  def _record_mass_info_from_urdf(self):
+    self._base_mass_urdf = self._bullet_cli.getDynamicsInfo(
+        self.quadruped, self.base_link_id)[0]
+    self._leg_masses_urdf = []
+    self._leg_masses_urdf.append(
+        self._bullet_cli.getDynamicsInfo(self.quadruped, self.motor_link_id[0])[0])
+
+  def _build_joint_name2id_dict(self):
+    num_joints = self._bullet_cli.getNumJoints(self.quadruped)
+    self._joint_name_to_id = {}
+    for i in range(num_joints):
+      joint_info = self._bullet_cli.getJointInfo(self.quadruped, i)
+      self._joint_name_to_id[joint_info[1].decode("UTF-8")] = joint_info[0]
+
+  def _build_motor_id_list(self):
+    self._motor_id_list = [self._joint_name_to_id[motor_name]
+                      for motor_name in self.link_names]
+
+  def _set_motor_torque_by_id(self, motor_id, torque, enable=1):
+    if not enable:
+      torque = 0
+    self._bullet_cli.setJointMotorControl2(
+        bodyIndex=self.quadruped,
+        jointIndex=motor_id,
+        controlMode=self._bullet_cli.TORQUE_CONTROL,
+        force=torque)
+
+  def _set_desired_motor_angle_by_name(self, motor_name, desired_angle):
+    self._set_desired_motor_angle_by_id(self._joint_name_to_id[motor_name], desired_angle)
+
+  def _set_desired_motor_angle_by_id(self, motor_id, desired_angle):
+    self._bullet_cli.setJointMotorControl2(
+        bodyIndex=self.quadruped,
+        jointIndex=motor_id,
+        controlMode=self._bullet_cli.POSITION_CONTROL,
+        targetPosition=desired_angle,
+        positionGain=self._kp,
+        velocityGain=self._kd,
+        force=self._max_force)
 
   def check_joint_contact(self):
     """
@@ -255,19 +248,21 @@ class Robot(MotorModel):
     @brief get the upper bound of the observation.
     @return the upper bound of an observation. see getobservation() for the details of each element of an observation.
     """
+    # FIXME(@zhiqi.jia) 这里设置的上/下限范围不太合理
     upper_bound = np.array([0.0] * self.GetObservationDimension())
     upper_bound[0:self.num_motors] = math.pi  # Joint angle.
-    upper_bound[self.num_motors:2 * self.num_motors] = self.params_list['motor']['motor_speed_limit'] # Joint velocity.
-    upper_bound[2 * self.num_motors:3 * self.num_motors] = self.params_list['motor']['observed_torque_limit']  # joint torque.
+    upper_bound[self.num_motors:2 * self.num_motors] = self.joint_velocity
+    upper_bound[2 * self.num_motors:3 * self.num_motors] = self.joint_torque
     upper_bound[3 * self.num_motors:3 * self.num_motors +
                 4] = 1.0  # quaternion of base orientation.
 
     # assuming a reasonable upper limit for base xy velocity (e.g., 10 m/s)
-    upper_bound[3 * self.num_motors + 4:3 * self.num_motors +
-                6] = 10.0  # Upper limit for XY velocity
+    # upper limit for XY velocity
+    upper_bound[3 * self.num_motors + 4:3 * self.num_motors + 6] = 10.0
 
     # assuming a reasonable upper limit for yaw rate (e.g., 5 rad/s)
-    upper_bound[3 * self.num_motors + 6] = 5.0  # Upper limit for yaw rate
+    # Upper limit for yaw rate
+    upper_bound[3 * self.num_motors + 6] = 5.0
 
     return upper_bound
 
@@ -306,10 +301,10 @@ class Robot(MotorModel):
       the desired motor angles are clipped based on the maximum allowed velocity. if the pd_control_enabled is true, a torque is calculated according to the difference between current and desired joint angle, as well as the joint velocity. this torque is exerted to the motor. for more information about pd control, please refer to: https://en.wikipedia.org/wiki/pid_controller.
     @param motor_commands: the 12 desired motor angles.
     """
-    if self._motor_vel_limit < np.inf:
+    if self.joint_velocity < np.inf:
       cur_motor_angle = self.get_motor_angles()
-      motor_cmd_max = (cur_motor_angle + self.time_step * self._motor_vel_limit)
-      motor_cmd_min = (cur_motor_angle - self.time_step * self._motor_vel_limit)
+      motor_cmd_max = (cur_motor_angle + self.time_step * self.joint_velocity)
+      motor_cmd_min = (cur_motor_angle - self.time_step * self.joint_velocity)
       motor_cmds = np.clip(motor_cmds, motor_cmd_min, motor_cmd_max)
 
     if self._accurate_motor_model_enabled or self._pd_control_enabled:
