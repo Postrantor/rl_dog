@@ -66,6 +66,7 @@ class BulletEnv(Env, Robot):
   _env_step_counter = 0
   _last_base_position = [0, 0, 0]
   _objectives = []
+  _observation = []
 
   def __init__(self, params_list):
     self.params_list = params_list
@@ -94,7 +95,6 @@ class BulletEnv(Env, Robot):
 
     self._action_bound = params_list['action_bound']
     self._action_dim = params_list['action_dim']
-    self._observation = params_list['observation']
 
     self.num_motors = params_list['num_motors']
     self.motor_angle_observation_index = params_list['motor_angle_observation_index']
