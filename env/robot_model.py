@@ -29,16 +29,21 @@ class Robot(MotorModel):
     @param motor_kp: proportional gain for the accurate motor model
     @param motor_kd: derivative gain for the acurate motor model
     @param torque_control_enabled: whether to use the torque control, if set to false, pose control will be used.
-    @param motor_overheat_protection: whether to shutdown the motor that has exerted large torque (overheat_shutdown_torque) for an extended amount of time (overheat_shutdown_time). see applyaction() in mdoger7.py for more details.
-    @param on_rack: whether to place the mdoger7 on rack. this is only used to debug the walking gait. in this mode, the mdoger7's base is hanged midair so that its walking gait is clearer to visualize.
+    @param motor_overheat_protection:
+            whether to shutdown the motor that has exerted large torque (overheat_shutdown_torque) for an extended amount of time (overheat_shutdown_time). see applyaction() in mdoger7.py for more details.
+    @param on_rack:
+            whether to place the mdoger7 on rack. this is only used to debug the walking gait. in this mode, the mdoger7's base is hanged midair so that its walking gait is clearer to visualize.
     @param kd_for_pd_controllers: kd value for the pd controllers of the motors.
     """
     self._bullet_cli = bullet_cli
 
     self.params_list = params_list
 
+    self._on_rack = params_list['on_rack']
     self.link_names = params_list['link_names']
     self.num_motors = params_list['num_motors']
+    self.num_legs = params_list['num_legs']
+
     self.time_step = params_list['time_step']
 
     self._self_collision_enabled = params_list['self_collision_enabled']
@@ -46,10 +51,6 @@ class Robot(MotorModel):
     self._motor_overheat_protection = params_list['motor_overheat_protection']
     self._motor_direction = params_list['motor_direction']
     self._pd_control_enabled = params_list['pd_control_enabled']
-    self._on_rack = params_list['on_rack']
-    self._h1motor_direction = params_list['h1motor_direction']
-    self._h2motor_direction = params_list['h2motor_direction']
-    self._h3motor_direction = params_list['h3motor_direction']
     self._max_force = params_list['max_force']
 
     # 这两个实际上应该是输出参数
@@ -75,16 +76,14 @@ class Robot(MotorModel):
     self.overheat_shutdown_time = params_list['overheat_shutdown_time']
     self.lower_constraint_point_right = params_list['lower_constraint_point_right']
     self.lower_constraint_point_left = params_list['lower_constraint_point_left']
-    self.leg_position = params_list['leg_position']
 
     # bases on the readings from 's default pose.
     self.init_position = params_list['init_position']
     self.init_orientation = params_list['init_orientation']
-    self.motor_link_id = params_list['motor_link_id']
-    self.foot_link_id = params_list['foot_link_id']
-    self.base_link_id = params_list['base_link_id']
+    self.base_link_id = params_list['link_id']['base_link_id']
+    self.foot_link_id = params_list['link_id']['foot_link_id']
+    self.motor_link_id = params_list['link_id']['motor_link_id']
 
-    self.num_legs = params_list['num_legs']
     self._default_abduction_angle = params_list['default_abduction_angle']
     self._default_hip_angle = params_list['default_hip_angle']
     self._default_knee_angle = params_list['default_knee_angle']
@@ -240,8 +239,8 @@ class Robot(MotorModel):
       - the yaw rate (rotational velocity around z-axis) of mdoger7's base.
     """
     linear_velocity, angular_velocity = self._bullet_cli.getBaseVelocity(self.quadruped)
-    xy_velocity = np.array(linear_velocity[:2])  # Take only the X and Y components
-    yaw_rate = angular_velocity[2]  # Z-axis component represents yaw rate
+    xy_velocity = np.array(linear_velocity[:2])  # take only the x and y components
+    yaw_rate = angular_velocity[2]  # z-axis component represents yaw rate
     return xy_velocity, yaw_rate
 
   def get_action_dimension(self):
@@ -252,29 +251,22 @@ class Robot(MotorModel):
     return self.num_motors
 
   def get_observation_upper_bound(self):
-  # def get_observation_upper_bound(self):
     """
     @brief get the upper bound of the observation.
     @return the upper bound of an observation. see getobservation() for the details of each element of an observation.
     """
-    # upper_bound = np.array([0.0] * self.GetObservationDimension())
-    # upper_bound[0:self.num_motors] = math.pi  # Joint angle.
-    # upper_bound[self.num_motors:2 * self.num_motors] = (motor.MOTOR_SPEED_LIMIT)  # Joint velocity.
-    # upper_bound[2 * self.num_motors:3 * self.num_motors] = (motor.OBSERVED_TORQUE_LIMIT
-    #                                                        )  # Joint torque.
-    # upper_bound[3 * self.num_motors:] = 1.0  # Quaternion of base orientation.
     upper_bound = np.array([0.0] * self.GetObservationDimension())
     upper_bound[0:self.num_motors] = math.pi  # Joint angle.
     upper_bound[self.num_motors:2 * self.num_motors] = self.params_list['motor']['motor_speed_limit'] # Joint velocity.
-    upper_bound[2 * self.num_motors:3 * self.num_motors] = self.params_list['motor']['observed_torque_limit']  # Joint torque.
+    upper_bound[2 * self.num_motors:3 * self.num_motors] = self.params_list['motor']['observed_torque_limit']  # joint torque.
     upper_bound[3 * self.num_motors:3 * self.num_motors +
-                4] = 1.0  # Quaternion of base orientation.
+                4] = 1.0  # quaternion of base orientation.
 
-    # Assuming a reasonable upper limit for base XY velocity (e.g., 10 m/s)
+    # assuming a reasonable upper limit for base xy velocity (e.g., 10 m/s)
     upper_bound[3 * self.num_motors + 4:3 * self.num_motors +
                 6] = 10.0  # Upper limit for XY velocity
 
-    # Assuming a reasonable upper limit for yaw rate (e.g., 5 rad/s)
+    # assuming a reasonable upper limit for yaw rate (e.g., 5 rad/s)
     upper_bound[3 * self.num_motors + 6] = 5.0  # Upper limit for yaw rate
 
     return upper_bound
@@ -335,11 +327,11 @@ class Robot(MotorModel):
                 > self.overheat_shutdown_time / self.time_step):
               self._motor_enabled_list[i] = False
 
-        # The torque is already in the observation space because we use
-        # GetMotorAngles and GetMotorVelocities.
+        # the torque is already in the observation space because we use
+        # getmotorangles and getmotorvelocities.
         self._observed_motor_torques = observed_torque
 
-        # Transform into the motor space when applying the torque.
+        # transform into the motor space when applying the torque.
         self._applied_motor_torque = np.multiply(actual_torque, self._motor_direction)
         for motor_id, motor_torque, motor_enabled in zip(self._motor_id_list,
                                                   self._applied_motor_torque,
@@ -347,10 +339,10 @@ class Robot(MotorModel):
           self._set_motor_torque_by_id(motor_id, motor_torque, motor_enabled)
       else:
         torque_commands = -self._kp * (q - motor_cmds) - self._kd * qdot
-        # The torque is already in the observation space because we use
-        # GetMotorAngles and GetMotorVelocities.
+        # the torque is already in the observation space because we use
+        # getmotorangles and getmotorvelocities.
         self._observed_motor_torques = torque_commands
-        # Transform into the motor space when applying the torque.
+        # transform into the motor space when applying the torque.
         self._applied_motor_torques = np.multiply(self._observed_motor_torques,
                                           self._motor_direction)
         for motor_id, motor_torque in zip(self._motor_id_list,
@@ -367,10 +359,8 @@ class Robot(MotorModel):
     @brief get the eight motor angles at the current moment.
     @return motor angles.
     """
-    motor_angles = [
-        self._bullet_cli.getJointState(self.quadruped, motor_id)[0]
-        for motor_id in self._motor_id_list
-    ]
+    motor_angles = [self._bullet_cli.getJointState(self.quadruped, motor_id)[0]
+                  for motor_id in self._motor_id_list]
     motor_angles = np.multiply(motor_angles, self._motor_direction)
     return motor_angles
 
@@ -379,10 +369,8 @@ class Robot(MotorModel):
     @brief get the velocity of all 12 motors.
     @return velocities of all 12 motors.
     """
-    motor_velocities = [
-        self._bullet_cli.getJointState(self.quadruped, motor_id)[1]
-        for motor_id in self._motor_id_list
-    ]
+    motor_velocities = [self._bullet_cli.getJointState(self.quadruped, motor_id)[1]
+                    for motor_id in self._motor_id_list]
     motor_velocities = np.multiply(motor_velocities, self._motor_direction)
     return motor_velocities
 
@@ -394,13 +382,12 @@ class Robot(MotorModel):
     if self._accurate_motor_model_enabled or self._pd_control_enabled:
       return self._observed_motor_torques
     else:
-      motor_torques = [
-          self._bullet_cli.getJointState(self.quadruped, motor_id)[3]
-          for motor_id in self._motor_id_list
-      ]
+      motor_torques = [self._bullet_cli.getJointState(self.quadruped, motor_id)[3]
+          for motor_id in self._motor_id_list]
       motor_torques = np.multiply(motor_torques, self._motor_direction)
     return motor_torques
 
+  # FIXME(@zhiqi.jia) from minitaur
   def convert_from_leg_model(self, actions):
     motor_angle = copy.deepcopy(actions)
     for i in range(len(actions)):
@@ -411,31 +398,6 @@ class Robot(MotorModel):
         motor_angle[i] += math.pi
     return motor_angle
 
-  # def ConvertFromLegModel(self, actions):
-  #   """Convert the actions that use leg model to the real motor actions.
-
-  #   Args:
-  #     actions: The theta, phi of the leg model.
-  #   Returns:
-  #     The eight desired motor angles that can be used in ApplyActions().
-  #   """
-
-  #   motor_angle = copy.deepcopy(actions)
-  #   scale_for_singularity = 1.5
-  #   offset_for_singularity = 1.5
-  #   half_num_motors = int(self.num_motors / 2)
-  #   quater_pi =1 * math.pi / 4
-  #   for i in range(self.num_motors):
-  #     action_idx = i // 2
-  #     forward_backward_component = (
-  #         -scale_for_singularity * quater_pi *
-  #         (actions[action_idx + half_num_motors] + offset_for_singularity))
-  #     extension_component = (-1)**i * quater_pi * actions[action_idx]
-  #     if i >= half_num_motors:
-  #       extension_component = -extension_component
-  #     motor_angle[i] = (3*math.pi  / 4 + forward_backward_component + extension_component)
-  #   return motor_angle
-
   def get_base_mass_from_urdf(self):
     """get the mass of the base from the urdf file."""
     return self._base_mass_urdf
@@ -445,9 +407,7 @@ class Robot(MotorModel):
     return self._leg_masses_urdf
 
   def set_base_mass(self, base_mass):
-    self._bullet_cli.changeDynamics(self.quadruped,
-                                  self.base_link_id,
-                                  mass=base_mass)
+    self._bullet_cli.changeDynamics(self.quadruped, self.base_link_id, mass=base_mass)
 
   def set_leg_masses(self, leg_masses):
     """
@@ -456,12 +416,8 @@ class Robot(MotorModel):
     @param leg_masses: the leg masses. leg_masses[0] is the mass of the leg link.
             leg_masses[1] is the mass of the motor.
     """
-    # for link_id in LEG_LINK_ID:
-    #   self._pybullet_client.changeDynamics(self.quadruped, link_id, mass=leg_masses[0])
     for link_id in self.motor_link_id:
-      self._bullet_cli.changeDynamics(self.quadruped,
-                                    link_id,
-                                    mass=leg_masses[0])
+      self._bullet_cli.changeDynamics(self.quadruped, link_id, mass=leg_masses[0])
 
   def set_foot_friction(self, foot_friction):
     """

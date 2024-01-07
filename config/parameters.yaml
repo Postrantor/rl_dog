@@ -29,8 +29,7 @@ environment:
   accurate_motor_model_enabled: True # 是否使用准确的直流电机模型
   torque_control_enabled: True # 是否使用扭矩控制，如果设置为False，则使用姿态控制
   motor_overheat_protection: False # 是否关闭已施加大力矩(OVERHEAT_SHUTDOWN_TORQUE)的电机，以防止过热(OVERHEAT_SHUTDOWN_TIME)。有关更多详细信息，请参见minitaur.py中的ApplyAction()函数。
-  hard_reset: True # 是否在重置时清除仿真并加载所有内容。如果设置为false，则重置只是将model放回起始位置并将其姿势设为初始配置。
-  on_rack: False # 是否将model放在架子上。这仅用于调试行走步态。在此模式下，model的基座悬挂在半空中，以便更清晰地可视化其步态。
+  hard_reset: True # 重置时清除仿真并加载所有内容。如果设置为false，则重置只是将model放回起始位置并将其姿势设为初始配置。
   time_step: 0.01
   num_bullet_solver_iterations: 300
   action_bound: 1
@@ -56,42 +55,36 @@ environment:
 
   # Robot
   robot:
+    num_motors: 12
+    num_legs: 4
     urdf_env:
       - "../mdoger7/urdf/mdoger7.urdf"
       - "../env/pybullet_data"
-    # current_table = [0, 10, 20, 30, 40, 50, 60]
-    # torque_table = [0, 1, 1.9, 2.45, 3.0, 3.25, 3.5]
     time_step: 0.01
-    self_collision_enabled: True # 是否允许机器人自身碰撞
-    motor_velocity_limit: .inf #np.inf # 每个马达的速度限制
+    self_collision_enabled: True # 是否允许自身碰撞
+    motor_velocity_limit: .inf #np.inf # 速度限制
+    kd_for_pd_controllers: 0.3
     pd_control_enabled: True
     accurate_motor_model_enabled: False
     motor_overheat_protection: False
-    on_rack: False
-    num_motors: 12
-    num_legs: 4
-    kd_for_pd_controllers: 0.3
-    motor_direction: [-1, -1, 1, 1, -1, 1, 1, -1, 1, -1, -1, 1]
-    h1motor_direction: [-1, -1, 1, 1]
-    h2motor_direction: [-1, 1, 1, -1]
-    h3motor_direction: [1, -1, -1, 1]
+    on_rack: False # 是否将model放在架子上。这仅用于调试行走步态。在此模式下，model的基座悬挂在半空中，以便更清晰地可视化其步态。
     max_force: 15
+    motor_direction: [-1, -1, 1, 1, -1, 1, 1, -1, 1, -1, -1, 1]
     init_observed_motor_torques: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     init_applied_motor_torques: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    # bases on the readings from 's default pose.
     init_position: [0, 0, 0.3]
     init_orientation: [0, 0, 0, 1]
     default_abduction_angle: 0.0
     default_hip_angle: 0
     default_knee_angle: 0
-    motor_link_id: [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]
-    foot_link_id: [3, 7, 11, 115]
-    base_link_id: -1
     overheat_shutdown_torque: 2.45
     overheat_shutdown_time: 1.0
     lower_constraint_point_right: [0, 0.00, 0.] # [nouse]
     lower_constraint_point_left: [0, 0.0, 0.] # [nouse]
-    leg_position: ["lf", "rf", "lb", "rb"]
+    link_id:
+      base_link_id: -1
+      foot_link_id: [3, 7, 11, 15]
+      motor_link_id: [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]
     link_names:
       [
         "lf1_joint",
@@ -118,3 +111,5 @@ environment:
       motor_torque_constant: 0.0954 # 电机转矩常数为0.0954
       motor_viscous_damping: 0 # 电机粘性阻尼为0
       motor_speed_limit: 500 # 电机速度限制通过计算得出
+      current_table: [0, 10, 20, 30, 40, 50, 60]
+      torque_table: [0, 1, 1.9, 2.45, 3.0, 3.25, 3.5]

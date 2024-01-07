@@ -22,8 +22,8 @@ class MotorModel():
     self._voltage_clipping = params_list['voltage_clipping'] # 电压限制
     self._observed_torque_limit = params_list['observed_torque_limit'] # 观测力矩限制
     self._motor_speed_limit = params_list['motor_speed_limit'] # 电机速度限制
-    self._current_table = [0, 10, 20, 30, 40, 50, 60]
-    self._torque_table = [0, 1, 1.9, 2.45, 3.0, 3.25, 3.5]
+    self._current_table = params_list['current_table']
+    self._torque_table = params_list['torque_table']
 
   def set_voltage(self, voltage):
     self._voltage = voltage
