@@ -75,11 +75,9 @@ class BulletEnv(Env, Robot):
     self._env_randomizer = self._init_env_randomizer(params_list['randomizer'])
     self._bullet_cli = self._init_bullet_cli(params_list['use_render'])
 
-    # 是否在重置时清除仿真并加载所有内容。如果设置为false，则重置只是将model放回起始位置并将其姿势设为初始配置。
-    # this assignment need to be after reset()
-    self.seed()
     self.reset(params_list['hard_reset'])
-    # 这两个参数用于初始化神经网络
+
+    # this assignment need to be after reset()
     action_high = np.array([self._action_bound] * self._action_dim)
     self.action_space = spaces.Box(-action_high, action_high, dtype=np.float32)
     observation_high = (self.robot.get_observation_upper_bound() + self.observation_eps)
@@ -154,10 +152,6 @@ class BulletEnv(Env, Robot):
     self._already_init = True
 
     return self._noisy_observation()
-
-  def seed(self, seed=None):
-    self.np_random, seed = seeding.np_random(seed)
-    return [seed]
 
   def step(self, action):
     """
