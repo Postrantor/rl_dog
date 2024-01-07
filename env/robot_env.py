@@ -92,7 +92,7 @@ class BulletEnv(Env, Robot):
 
     self._urdf_env = params_list['urdf_env'][1]
 
-    self._cam_dist = params_list['cam_dist']
+    self._cam_dist = params_list['cam_distance']
     self._cam_yaw = params_list['cam_yaw']
     self._cam_pitch = params_list['cam_pitch']
     # self._env_step_counter = params_list['env_step_counter']
@@ -163,16 +163,9 @@ class BulletEnv(Env, Robot):
     @return info: a dictionary that stores diagnostic information.
     @raise valueerror: the action dimension is not the same as the number of motors.
     @raise valueerror: the magnitude of actions is out of bounds.
-    @param _last_frame_time: 全局变量，仅供该函数使用
     """
     self._nice_visualization_for_render()
-
-    base_pos = self.robot.get_base_position()
-    camInfo = self._bullet_cli.getDebugVisualizerCamera()
-    distance = camInfo[10]
-    yaw = camInfo[8]
-    pitch = camInfo[9]
-    self._bullet_cli.resetDebugVisualizerCamera(distance, yaw, pitch, base_pos)
+    self._nice_base_pos()
 
     action = self._transform_action_to_motor_command(action)
     for _ in range(self._action_repeat):
@@ -370,6 +363,13 @@ class BulletEnv(Env, Robot):
     bullet_cli.resetDebugVisualizerCamera(self._cam_dist, self._cam_yaw, self._cam_pitch, [0, 0, 0])
 
     return bullet_cli
+
+  def _nice_base_pos(self):
+    base_position = self.robot.get_base_position()
+    self._bullet_cli.resetDebugVisualizerCamera(self._cam_dist,
+                                      self._cam_yaw,
+                                      self._cam_pitch,
+                                      base_position)
 
   def _reset_env_status(self):
     self._env_step_counter = 0

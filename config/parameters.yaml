@@ -35,7 +35,7 @@ environment:
   hard_reset: True # 是否在重置时清除仿真并加载所有内容。如果设置为false，则重置只是将model放回起始位置并将其姿势设为初始配置。
   on_rack: False # 是否将model放在架子上。这仅用于调试行走步态。在此模式下，model的基座悬挂在半空中，以便更清晰地可视化其步态。
   time_step: 0.01
-  cam_dist: 1.0
+  cam_distance: 1.0
   cam_yaw: 0
   cam_pitch: -30
   num_bullet_solver_iterations: 300
