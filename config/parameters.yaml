@@ -28,7 +28,6 @@ environment:
   leg_model_enabled: True # 是否使用腿部马达重新参数化动作空间
   accurate_motor_model_enabled: True # 是否使用准确的直流电机模型
   torque_control_enabled: True # 是否使用扭矩控制，如果设置为False，则使用姿态控制
-  motor_overheat_protection: False # 是否关闭已施加大力矩(OVERHEAT_SHUTDOWN_TORQUE)的电机，以防止过热(OVERHEAT_SHUTDOWN_TIME)。有关更多详细信息，请参见minitaur.py中的ApplyAction()函数。
   hard_reset: True # 重置时清除仿真并加载所有内容。如果设置为false，则重置只是将model放回起始位置并将其姿势设为初始配置。
   time_step: 0.01
   num_bullet_solver_iterations: 300
@@ -65,7 +64,6 @@ environment:
     kd_for_pd_controllers: 0.3
     pd_control_enabled: True
     accurate_motor_model_enabled: False
-    motor_overheat_protection: False
     on_rack: False # 是否将model放在架子上。这仅用于调试行走步态。在此模式下，model的基座悬挂在半空中，以便更清晰地可视化其步态。
     max_force: 15
     motor_direction: [-1, -1, 1, 1, -1, 1, 1, -1, 1, -1, -1, 1]
@@ -76,8 +74,11 @@ environment:
     default_abduction_angle: 0.0
     default_hip_angle: 0
     default_knee_angle: 0
-    overheat_shutdown_torque: 2.45
-    overheat_shutdown_time: 1.0
+    # 关闭电机，以防止过热(OVERHEAT_SHUTDOWN_TIME)。有关更多详细信息，请参见minitaur.py中的ApplyAction()函数。
+    motor_overheat:
+      protection: False
+      shutdown_torque: 2.45
+      shutdown_time: 1.0
     lower_constraint_point_right: [0, 0.00, 0.] # [nouse]
     lower_constraint_point_left: [0, 0.0, 0.] # [nouse]
     link_id:

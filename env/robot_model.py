@@ -41,7 +41,6 @@ class Robot(MotorModel):
 
   def _parse_config(self, params_list):
     self._on_rack = params_list['on_rack']
-    self.link_names = params_list['link_names']
     self.num_motors = params_list['num_motors']
     self.num_legs = params_list['num_legs']
 
@@ -51,23 +50,24 @@ class Robot(MotorModel):
     self.joint_torque = params_list['motor']['observed_torque_limit']
 
     self._self_collision_enabled = params_list['self_collision_enabled']
-    self._motor_overheat_protection = params_list['motor_overheat_protection']
     self._motor_direction = params_list['motor_direction']
     self._pd_control_enabled = params_list['pd_control_enabled']
     self._max_force = params_list['max_force']
 
-    # 这两个实际上应该是输出参数
-    self._observed_motor_torques = np.array(params_list['init_observed_motor_torques'])
-    self._applied_motor_torques = np.array(params_list['init_applied_motor_torques'])
-
-    self._urdf_env = params_list['urdf_env'][1]
+    # load urdf
     self._urdf_robot = params_list['urdf_env'][0]
+    self._urdf_env = params_list['urdf_env'][1]
 
-    self.overheat_shutdown_torque = params_list['overheat_shutdown_torque']
-    self.overheat_shutdown_time = params_list['overheat_shutdown_time']
+    # if OVERHEAT_SHUTDOWN_TIME, shutdown motor
+    # 请参见minitaur.py中的ApplyAction()函数。
+    self.motor_overheat_protection = params_list['motor_overheat']['protection']
+    self.overheat_shutdown_torque = params_list['motor_overheat']['shutdown_torque']
+    self.overheat_shutdown_time = params_list['motor_overheat']['shutdown_time']
+
     self.lower_constraint_point_right = params_list['lower_constraint_point_right']
     self.lower_constraint_point_left = params_list['lower_constraint_point_left']
 
+    self.link_names = params_list['link_names']
     self.base_link_id = params_list['link_id']['base_link_id']
     self.foot_link_id = params_list['link_id']['foot_link_id']
     self.motor_link_id = params_list['link_id']['motor_link_id']
@@ -91,6 +91,10 @@ class Robot(MotorModel):
     else:
       self._kp = 1
       self._kd = 1
+
+    # 这两个实际上应该是输出参数
+    self._observed_motor_torques = np.array(params_list['init_observed_motor_torques'])
+    self._applied_motor_torques = np.array(params_list['init_applied_motor_torques'])
 
   def reset(self, reload_urdf=True):
     """
@@ -312,14 +316,14 @@ class Robot(MotorModel):
       qdot = self.get_motor_velocities()
       if self._accurate_motor_model_enabled:
         actual_torque, observed_torque = self._motor_model.convert_to_torque(motor_cmds, q, qdot)
-        if self._motor_overheat_protection:
+        # 电机过热保护，超过时间阈值则关闭电机
+        if self.motor_overheat_protection:
           for i in range(self.num_motors):
             if abs(actual_torque[i]) > self.overheat_shutdown_torque:
               self._overheat_counter[i] += 1
             else:
               self._overheat_counter[i] = 0
-            if (self._overheat_counter[i]
-                > self.overheat_shutdown_time / self.time_step):
+            if (self._overheat_counter[i] > self.overheat_shutdown_time / self.time_step):
               self._motor_enabled_list[i] = False
 
         # the torque is already in the observation space because we use
