@@ -73,7 +73,7 @@ class BulletEnv(Env, Robot):
 
     ## init env render
     self._env_randomizer = self._init_env_randomizer(params_list['randomizer'])
-    self._bullet_cli = self._init_bullet_cli(params_list['use_render'])
+    self._bullet_cli = self._init_bullet_cli(params_list['render'])
 
     self.reset(params_list['hard_reset'])
 
@@ -92,11 +92,6 @@ class BulletEnv(Env, Robot):
 
     self._urdf_env = params_list['urdf_env'][1]
 
-    self._cam_dist = params_list['cam_distance']
-    self._cam_yaw = params_list['cam_yaw']
-    self._cam_pitch = params_list['cam_pitch']
-    # self._env_step_counter = params_list['env_step_counter']
-    # self._last_base_position = params_list['last_base_position']
     self._action_bound = params_list['action_bound']
     self._action_dim = params_list['action_dim']
     self._observation = params_list['observation']
@@ -145,9 +140,10 @@ class BulletEnv(Env, Robot):
 
     if not self._torque_control_enabled:
       # FIXME(@zhiqi.jia): remove for-loop(100)
-      if self._pd_control_enabled or self._accurate_motor_model_enabled:
-        self.robot.apply_action([math.pi] * 12)
-      self._bullet_cli.stepSimulation()
+      for _ in range(100):
+        if self._pd_control_enabled or self._accurate_motor_model_enabled:
+          self.robot.apply_action([math.pi] * 12)
+        self._bullet_cli.stepSimulation()
 
     self._already_init = True
 
@@ -164,17 +160,20 @@ class BulletEnv(Env, Robot):
     @raise valueerror: the action dimension is not the same as the number of motors.
     @raise valueerror: the magnitude of actions is out of bounds.
     """
+    # nice visual render model
     self._nice_visualization_for_render()
     self._nice_base_pos()
 
     action = self._transform_action_to_motor_command(action)
+    # FIXME(@zhiqi.jia) for-loop error?
     for _ in range(self._action_repeat):
       self.robot.apply_action(action)
       self._bullet_cli.stepSimulation()
 
-    self._env_step_counter += 1
     reward = self._reward()
     done = self._termination()
+
+    self._env_step_counter += 1
     return np.array(self._noisy_observation()), reward, done, {}
 
   def get_motor_angles(self):
@@ -341,11 +340,15 @@ class BulletEnv(Env, Robot):
     return EnvRandomizer(env_randomizer)
 
   ## for render
-  def _init_bullet_cli(self, use_render):
+  def _init_bullet_cli(self, render_params):
     """
     @brief init bullet client
       set render param, and get bullet client
     """
+    self._cam_dist = render_params['cam_distance']
+    self._cam_yaw = render_params['cam_yaw']
+    self._cam_pitch = render_params['cam_pitch']
+    use_render = render_params['use']
     if use_render:
       bullet_cli = bc.BulletClient(connection_mode=pybullet.GUI)
     else:

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This file implements the functionalities of a minitaur using pybullet.
+this file implements the functionalities of a minitaur using pybullet.
 """
 
 import copy
@@ -38,12 +38,12 @@ class Robot(MotorModel):
 
     self.parameters_list = params_list
     self.num_motors = params_list['num_motors']
+    self.time_step = params_list['time_step']
     self._self_collision_enabled = params_list['self_collision_enabled']
     self._motor_vel_limit = params_list['motor_velocity_limit']
     self._pd_control_enabled = params_list['pd_control_enabled']
     self._motor_overheat_protection = params_list['motor_overheat_protection']
     self._on_rack = params_list['on_rack']
-    self.time_step = params_list['time_step']
     self._motor_direction = params_list['motor_direction']
     self._h1motor_direction = params_list['h1motor_direction']
     self._h2motor_direction = params_list['h2motor_direction']

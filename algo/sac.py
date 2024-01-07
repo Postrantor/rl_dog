@@ -29,7 +29,7 @@ class SAC2Agent:
 
   def __init__(self, env, parameters_list):
     """
-    :param env: OpenAI Gym环境的实例，模型将在其上进行学习
+    :param env: openai gym环境的实例，模型将在其上进行学习
     :param alpha: 初始alpha值，float类型
     :param alr: 用于更新alpha的学习率，float类型
     :param qlr: 用于更新q函数的学习率，float类型
