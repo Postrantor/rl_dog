@@ -398,7 +398,7 @@
   "[python]": {
     "editor.formatOnSaveMode": "file",
     "editor.formatOnSave": true,
-    "editor.defaultFormatter": "eeyore.yapf",
+    "editor.defaultFormatter": "ms-python.autopep8",
     "editor.formatOnType": true
   },
 
