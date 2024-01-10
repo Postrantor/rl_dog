@@ -134,6 +134,5 @@ class PlotFigure(CSVClass):
     plt.show()
 
   def create_plot(self):
-    # 创建绘图对象
     fig, ax = plt.subplots()
     return fig, ax

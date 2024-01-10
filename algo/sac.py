@@ -13,16 +13,20 @@ from network.network import PolicyNetwork
 # from self
 from logger.logger import Logger  # get logger
 from utils.replay_memory import ReplayMemory
+# plot
+import matplotlib.pyplot as plt
+from utils.plot_figure import PlotFigure
 
 logger = Logger().get_logger()
+
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
-class SAC2Agent:
+class SAC2Agent(PlotFigure):
   """
   Agent for the second generation of the Soft Actor Critic learning algorithm presented in
   Soft Actor-Critic Algorithms and Applications, Haarnoja et al. 2018
-  
+
   Differs from SACAgent by replacing the need for a value function with an entropy temperature parameter and tuning this while learning
   > 与SACAgent不同之处在于，它通过消除对值函数的需求，并使用熵温度参数来进行调整
   """

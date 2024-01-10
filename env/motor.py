@@ -3,8 +3,12 @@
 本文件实现了一个准确的电机模型。
 """
 import numpy as np
+# plot
+import matplotlib.pyplot as plt
+from utils.plot_figure import PlotFigure
 
-class MotorModel():
+
+class MotorModel(PlotFigure):
   """
   @brief 准确的电机模型，基于直流电动机的物理原理。
     该电机模型支持两种控制类型：位置控制和力矩控制。在位置控制模式下，指定了期望的电机角度，并根据内部电机模型计算出力矩。当指定力矩控制时，将PWM信号转换为力矩。
@@ -15,13 +19,13 @@ class MotorModel():
     self._torque_control_enabled = params_list['torque_control_enabled']
     self._kp = params_list['kp']
     self._kd = params_list['kd']
-    self._resistance = params_list['motor_resistance'] # 电机电阻
-    self._voltage = params_list['motor_voltage'] # 电机电压
-    self._torque_constant = params_list['motor_torque_constant'] # 电机转矩常数
-    self._viscous_damping = params_list['motor_viscous_damping'] # 电机粘性阻尼
-    self._voltage_clipping = params_list['voltage_clipping'] # 电压限制
-    self._observed_torque_limit = params_list['observed_torque_limit'] # 观测力矩限制
-    self._motor_speed_limit = params_list['motor_speed_limit'] # 电机速度限制
+    self._resistance = params_list['motor_resistance']  # 电机电阻
+    self._voltage = params_list['motor_voltage']  # 电机电压
+    self._torque_constant = params_list['motor_torque_constant']  # 电机转矩常数
+    self._viscous_damping = params_list['motor_viscous_damping']  # 电机粘性阻尼
+    self._voltage_clipping = params_list['voltage_clipping']  # 电压限制
+    self._observed_torque_limit = params_list['observed_torque_limit']  # 观测力矩限制
+    self._motor_speed_limit = params_list['motor_speed_limit']  # 电机速度限制
     self._current_table = params_list['current_table']
     self._torque_table = params_list['torque_table']
 

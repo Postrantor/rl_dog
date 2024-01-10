@@ -8,9 +8,12 @@ import math
 import numpy as np
 # from self
 from env.motor import MotorModel
+# plot
+import matplotlib.pyplot as plt
+from utils.plot_figure import PlotFigure
 
 
-class Robot(MotorModel):
+class Robot(MotorModel, PlotFigure):
   """
   the robot class that simulates a quadruped robot from ghost robotics.
   """
@@ -139,8 +142,8 @@ class Robot(MotorModel):
       self.reset_pose()
     else:
       self._bullet_cli.resetBasePositionAndOrientation(self.quadruped,
-                                          self.init_position,
-                                          self.init_orientation)
+                                                       self.init_position,
+                                                       self.init_orientation)
       self._bullet_cli.resetBaseVelocity(self.quadruped, [0, 0, 0], [0, 0, 0])
       self.reset_pose()
 
@@ -153,9 +156,9 @@ class Robot(MotorModel):
     for name, i in zip(self.link_names, range(len(self.link_names))):
       angle = self.init_motor_angles[i]
       self._bullet_cli.resetJointState(self.quadruped,
-                              self._joint_name_to_id[name],
-                              angle,
-                              targetVelocity=0)
+                                       self._joint_name_to_id[name],
+                                       angle,
+                                       targetVelocity=0)
     for name in self._joint_name_to_id:
       joint_id = self._joint_name_to_id[name]
       self._bullet_cli.setJointMotorControl2(
@@ -179,7 +182,7 @@ class Robot(MotorModel):
 
   def _build_motor_id_list(self):
     self._motor_id_list = [self._joint_name_to_id[motor_name]
-                      for motor_name in self.link_names]
+                           for motor_name in self.link_names]
 
   def _set_motor_torque_by_id(self, motor_id, torque, enable=True):
     if not enable:
@@ -343,8 +346,8 @@ class Robot(MotorModel):
         # transform into the motor space when applying the torque.
         self._applied_motor_torque = np.multiply(actual_torque, self.motor_direction)
         for motor_id, motor_torque, motor_enabled in zip(self._motor_id_list,
-                                                  self._applied_motor_torque,
-                                                  self._motor_enabled_list):
+                                                         self._applied_motor_torque,
+                                                         self._motor_enabled_list):
           self._set_motor_torque_by_id(motor_id, motor_torque, motor_enabled)
       else:
         torque_commands = -self._kp * (q - motor_cmds) - self._kd * qdot
@@ -353,14 +356,14 @@ class Robot(MotorModel):
         self._observed_motor_torques = torque_commands
         # transform into the motor space when applying the torque.
         self._applied_motor_torques = np.multiply(self._observed_motor_torques,
-                                          self.motor_direction)
+                                                  self.motor_direction)
         for motor_id, motor_torque in zip(self._motor_id_list,
-                                    self._applied_motor_torques):
+                                          self._applied_motor_torques):
           self._set_motor_torque_by_id(motor_id, motor_torque)
     else:
       motor_commands_with_direction = np.multiply(motor_cmds, self.motor_direction)
       for motor_id, motor_command_with_direction in zip(
-          self._motor_id_list, motor_commands_with_direction):
+              self._motor_id_list, motor_commands_with_direction):
         self._set_desired_motor_angle_by_id(motor_id, motor_command_with_direction)
 
   def get_motor_angles(self):
@@ -369,7 +372,7 @@ class Robot(MotorModel):
     @return motor angles.
     """
     motor_angles = [self._bullet_cli.getJointState(self.quadruped, motor_id)[0]
-                  for motor_id in self._motor_id_list]
+                    for motor_id in self._motor_id_list]
     motor_angles = np.multiply(motor_angles, self.motor_direction)
     return motor_angles
 
@@ -379,7 +382,7 @@ class Robot(MotorModel):
     @return velocities of all 12 motors.
     """
     motor_velocities = [self._bullet_cli.getJointState(self.quadruped, motor_id)[1]
-                    for motor_id in self._motor_id_list]
+                        for motor_id in self._motor_id_list]
     motor_velocities = np.multiply(motor_velocities, self.motor_direction)
     return motor_velocities
 
@@ -392,7 +395,7 @@ class Robot(MotorModel):
       return self._observed_motor_torques
     else:
       motor_torques = [self._bullet_cli.getJointState(self.quadruped, motor_id)[3]
-                      for motor_id in self._motor_id_list]
+                       for motor_id in self._motor_id_list]
       motor_torques = np.multiply(motor_torques, self.motor_direction)
     return motor_torques
 
@@ -435,8 +438,8 @@ class Robot(MotorModel):
     """
     for link_id in self.foot_link_id:
       self._bullet_cli.changeDynamics(self.quadruped,
-                                link_id,
-                                lateralFriction=foot_friction)
+                                      link_id,
+                                      lateralFriction=foot_friction)
 
   def set_battery_voltage(self, voltage):
     if self._accurate_motor_model_enabled:

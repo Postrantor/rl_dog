@@ -3,6 +3,7 @@
 this file implements the gym environment of mdoger7.
 """
 
+from env.robot_model import Robot
 import math
 import time
 from random import uniform
@@ -15,18 +16,22 @@ from gym.utils import seeding
 import pybullet
 from pybullet_utils import bullet_client as bc
 from pybullet_envs.bullet.env_randomizer_base import EnvRandomizerBase
+# plot
+import matplotlib.pyplot as plt
+from utils.plot_figure import PlotFigure
 
-class EnvRandomizer(EnvRandomizerBase):
+
+class EnvRandomizer(EnvRandomizerBase, PlotFigure):
   """
   @brief 重置时改变 gym 的随机器。
   """
 
   def __init__(self, params_list):
-    self._leg_friction = params_list['leg_friction'] # 摩擦系数
-    self._batt_volt = params_list['battery_voltage_range'] # unit: volt
-    self._leg_mass_err = params_list['leg_mass_error_range'] # -/+20%
-    self._base_mass_err = params_list['base_mass_error_range'] # -/+20%
-    self._viscous_damping = params_list['motor_viscous_damping_range'] # N·m·s/rad (转矩/角速度)
+    self._leg_friction = params_list['leg_friction']  # 摩擦系数
+    self._batt_volt = params_list['battery_voltage_range']  # unit: volt
+    self._leg_mass_err = params_list['leg_mass_error_range']  # -/+20%
+    self._base_mass_err = params_list['base_mass_error_range']  # -/+20%
+    self._viscous_damping = params_list['motor_viscous_damping_range']  # N·m·s/rad (转矩/角速度)
 
   def randomize_env(self, robot):
     """
@@ -52,9 +57,7 @@ class EnvRandomizer(EnvRandomizerBase):
     robot.set_foot_friction(uniform(self._leg_friction[0], self._leg_friction[1]))
 
 
-from env.robot_model import Robot
-
-class BulletEnv(Env, Robot):
+class BulletEnv(Env, Robot, PlotFigure):
   """
   @brief The gym environment for the robot.
     It simulates the locomotion of a robot, a quadruped robot. The state space include the angles, velocities and torques for all the motors and the action space is the desired motor angle for each motor. The reward function is based on how far the robot walks in 1000 steps and penalizes the energy expenditure.
@@ -74,7 +77,7 @@ class BulletEnv(Env, Robot):
     self.params_list = params_list
     self._parse_config(params_list)
 
-    ## init env render
+    # init env render
     self._env_randomizer = self._init_env_randomizer(params_list['randomizer'])
     self._bullet_cli = self._init_bullet_cli(params_list['render'])
 
@@ -118,8 +121,8 @@ class BulletEnv(Env, Robot):
     self._action_repeat = params_list['action_repeat']  # 运动重复的次数
     self._num_bullet_solver_iterations = params_list['num_bullet_solver_iterations']
 
-    self._pd_control_enabled = params_list['robot']['pd_control_enabled'] # 是否为每个马达启用PD控制器
-    self._accurate_motor_model_enabled = params_list['robot']['accurate_motor_model_enabled'] # 是否使用准确的直流电机模型
+    self._pd_control_enabled = params_list['robot']['pd_control_enabled']  # 是否为每个马达启用PD控制器
+    self._accurate_motor_model_enabled = params_list['robot']['accurate_motor_model_enabled']  # 是否使用准确的直流电机模型
     # PD control needs smaller time step for stability.
     if self._pd_control_enabled or self._accurate_motor_model_enabled:
       self._time_step /= self._num_substeps
@@ -130,7 +133,7 @@ class BulletEnv(Env, Robot):
     # 必须在init()逻辑中执行一次
     if hard_reset or (not self._already_init):
       self.robot = Robot(params_list=self._robot_params,
-                      bullet_cli=self._reset_bullet_cli(self._bullet_cli))
+                         bullet_cli=self._reset_bullet_cli(self._bullet_cli))
     else:
       self.robot.reset(reload_urdf=False)
 
@@ -230,11 +233,11 @@ class BulletEnv(Env, Robot):
     pitch = math.asin(-rot_mat[6])
     # yaw = math.atan2(rot_mat[3], rot_mat[0])
     return (np.dot(np.asarray([0, 0, 1]), np.asarray(local_up))
-                  < 0.85
-                  or abs(roll) > 0.1
-                  or abs(pitch) > 0.2
-                  or abs(pitch) > 0.1
-                  or position[2] < 0.25)
+            < 0.85
+            or abs(roll) > 0.1
+            or abs(pitch) > 0.2
+            or abs(pitch) > 0.1
+            or position[2] < 0.25)
 
     # return (abs(roll) > 0.174 or abs(pitch) > 0.174 or abs(yaw) > 0.174 or pos[2] < 0.25)
     # return (np.dot(np.asarray([1, 0, 0]), np.asarray(local_up_x)) > 0.985 or np.dot(np.asarray([0, 1, 0]), np.asarray(local_up_y)) > 0.9397 or np.dot(np.asarray([0, 0, 1]), np.asarray(local_up_z)) > 0.9397 or pos[2] < 0.3)
@@ -247,8 +250,8 @@ class BulletEnv(Env, Robot):
     position = self.robot.get_base_position()
     distance = math.sqrt(position[0]**2 + position[1]**2)
     condition = (self.is_fallen() or
-              (distance > self._distance_limit) or
-              (self.robot.check_joint_contact() > 0))
+                 (distance > self._distance_limit) or
+                 (self.robot.check_joint_contact() > 0))
     return condition
 
   def _reward(self):
@@ -269,7 +272,7 @@ class BulletEnv(Env, Robot):
 
     # calculate the velocity error (euclidean distance between current velocity and target velocity)
     velocity_error = ((xy_velocity[0] - target_xy_velocity[0])**2 +
-                  (xy_velocity[1] - target_xy_velocity[1])**2)**0.5
+                      (xy_velocity[1] - target_xy_velocity[1])**2)**0.5
     yaw_velocity_error = (yaw_rate - 3)**2
 
     # design the xy velocity reward component based on the error
@@ -290,7 +293,7 @@ class BulletEnv(Env, Robot):
     self._last_base_position = current_base_position
 
     energy_reward = np.abs(np.dot(self.robot.get_motor_torques(),
-                              self.robot.get_motor_velocities())) * self._time_step
+                                  self.robot.get_motor_velocities())) * self._time_step
     reward = (self._distance_weight * forward_reward -
               self._energy_weight * energy_reward +
               self._drift_weight * drift_reward +
@@ -330,18 +333,17 @@ class BulletEnv(Env, Robot):
       action = self.robot.convert_from_leg_model(action)
     return action
 
-
   def _check_lib_version(self):
     if (importlib_metadata.version('gym') < "0.9.6"):
       return True
     else:
       return False
 
-  ## for env
+  # for env
   def _init_env_randomizer(self, env_randomizer):
     return EnvRandomizer(env_randomizer)
 
-  ## for render
+  # for render
   def _init_bullet_cli(self, render_params):
     """
     @brief init bullet client
@@ -370,9 +372,9 @@ class BulletEnv(Env, Robot):
   def _nice_base_pos(self):
     base_position = self.robot.get_base_position()
     self._bullet_cli.resetDebugVisualizerCamera(self._cam_dist,
-                                      self._cam_yaw,
-                                      self._cam_pitch,
-                                      base_position)
+                                                self._cam_yaw,
+                                                self._cam_pitch,
+                                                base_position)
 
   def _reset_env_status(self):
     self._env_step_counter = 0
